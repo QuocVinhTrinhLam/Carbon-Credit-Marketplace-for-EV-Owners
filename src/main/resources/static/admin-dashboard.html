@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard — Live</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f6f7fb;color:#222;margin:20px}
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .card-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .card{background:#fff;padding:14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);flex:1;min-width:200px}
+  /* Chart container helper to keep charts a fixed height */
+  .chart-holder{height:280px;max-height:360px;min-height:220px}
+  .chart-holder canvas{width:100% !important;height:100% !important;display:block}
+    .label{font-size:12px;color:#666}
+    .value{font-size:24px;font-weight:600;color:#0b63d6}
+    #logs{background:#fff;padding:12px;border-radius:8px;max-height:280px;overflow:auto}
+    .status{font-size:13px;color:#444}
+    button, input[type=number]{padding:6px 10px;border-radius:6px;border:1px solid #ddd;background:#fff}
+    .small{font-size:12px;color:#666}
+    .delta{margin-top:6px;font-weight:500}
+    .delta.positive{color:green}
+    .delta.negative{color:red}
+    footer{margin-top:14px;font-size:13px;color:#555}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Admin Dashboard (Live)</h1>
+      <div class="controls">
+        <button id="btn-refresh">Refresh</button>
+        <label class="small">Interval:
+          <select id="interval" style="padding:6px;border-radius:6px;border:1px solid #ddd;background:#fff">
+            <option value="5">5s</option>
+            <option value="30">30s</option>
+            <option value="60">1m</option>
+          </select>
+        </label>
+        <button id="btn-toggle">Pause</button>
+      </div>
+    </header>
+
+    <section class="card-row">
+      <div class="card">
+        <div class="label">Total Users</div>
+        <div class="value" id="totalUsers">—</div>
+        <div class="small delta" id="usersDelta">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Total Transactions</div>
+        <div class="value" id="totalTransactions">—</div>
+        <div class="small delta" id="txDelta">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Credits Verified</div>
+        <div class="value" id="creditsVerified">—</div>
+        <div class="small delta" id="creditsDelta">—</div>
+      </div>
+      <div class="card">
+        <div class="label">Platform Revenue</div>
+        <div class="value" id="platformRevenue">—</div>
+        <div class="small delta" id="revenueDelta">—</div>
+      </div>
+    </section>
+
+    <!-- Transaction volume chart -->
+    <section class="card-row">
+      <div class="card chart-card" style="flex-basis:100%">
+        <div class="label">Transaction Volume</div>
+        <div class="small">Monthly transactions and trading volume</div>
+        <div class="chart-holder" style="margin-top:12px">
+          <div style="display:flex;gap:12px;align-items:stretch;height:100%">
+            <div style="flex:1">
+              <canvas id="txVolumeChart"></canvas>
+            </div>
+            <div style="width:260px;flex:0 0 260px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="width:180px;height:180px">
+                <canvas id="creditDonut"></canvas>
+              </div>
+              <div id="creditLegend" style="margin-top:8px;width:100%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transaction status cards removed as requested -->
+
+    <div id="logs">
+      <div class="small" id="status">Connecting to live stream...</div>
+      <div id="activity"></div>
+    </div>
+
+    <footer>
+      <span id="clientCount">Connected clients: —</span>
+      <span style="float:right" id="lastUpdated">Last updated: —</span>
+    </footer>
+  </div>
+
+  <script>
+    // Endpoints used by this page
+    const streamUrl = '/api/admin/dashboard/stream';
+    const summaryUrl = '/api/admin/dashboard/summary';
+    const clientsUrl = '/api/admin/dashboard/clients';
+    const refreshUrl = '/api/admin/dashboard/refresh';
+    const intervalUrl = '/api/admin/dashboard/refresh/interval';
+    const toggleUrl = '/api/admin/dashboard/refresh/toggle';
+
+    let isPaused = false;
+    let lastData = null;
+
+    function log(type, text){
+      const el = document.createElement('div');
+      el.textContent = new Date().toLocaleTimeString() + ' ['+type+'] ' + text;
+      const activity = document.getElementById('activity');
+      activity.insertBefore(el, activity.firstChild);
+      if(activity.children.length > 200) activity.removeChild(activity.lastChild);
+    }
+
+    function setLastUpdated(ts){
+      const el = document.getElementById('lastUpdated');
+      const d = ts ? new Date(ts) : new Date();
+      el.textContent = 'Last updated: ' + d.toLocaleString();
+    }
+
+    function render(data){
+      if(!data) return;
+      // Primary numeric fields
+  const fields = ['totalUsers','totalTransactions','creditsVerified','platformRevenue'];
+      fields.forEach(k => {
+        const el = document.getElementById(k);
+        if(!el) return;
+        const v = (data[k] !== undefined && data[k] !== null) ? data[k] : null;
+        if(v === null) el.textContent = '—';
+        else {
+          // platformRevenue may be a decimal/float — format with currency-like formatting
+          if(k === 'platformRevenue') el.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(v);
+          else el.textContent = new Intl.NumberFormat().format(v);
+        }
+      });
+
+      // Deltas (month-over-month or server-provided change fields)
+      const setDelta = (id, raw) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        if(raw === undefined || raw === null){ el.textContent = '—'; el.classList.remove('positive','negative'); return; }
+        const n = Number(raw);
+        // If negative values should be removed, show blank (em dash) instead
+        if (n < 0) { el.textContent = '—'; el.classList.remove('positive','negative'); return; }
+        const sign = n > 0 ? '+' : '';
+        const display = (Math.abs(n) % 1 === 0) ? new Intl.NumberFormat().format(Math.abs(n)) : Math.abs(n).toFixed(2);
+        el.textContent = sign + display;
+        el.classList.remove('positive','negative');
+        if(n > 0) el.classList.add('positive');
+      };
+
+      // server may provide usersThisMonth/usersPrevMonth or usersDelta
+      if(data.usersDelta !== undefined) setDelta('usersDelta', data.usersDelta);
+      else if(data.usersThisMonth !== undefined && data.usersPrevMonth !== undefined) setDelta('usersDelta', data.usersThisMonth - data.usersPrevMonth);
+      if(data.revenueDelta !== undefined) setDelta('revenueDelta', data.revenueDelta);
+      else if(data.revenueThisMonth !== undefined && data.revenuePrevMonth !== undefined) setDelta('revenueDelta', data.revenueThisMonth - data.revenuePrevMonth);
+      if(data.creditsDelta !== undefined) setDelta('creditsDelta', data.creditsDelta);
+      else if(data.creditsThisMonth !== undefined && data.creditsPrevMonth !== undefined) setDelta('creditsDelta', data.creditsThisMonth - data.creditsPrevMonth);
+      if(data.txDelta !== undefined) setDelta('txDelta', data.txDelta);
+      else if(data.transactionsThisMonth !== undefined && data.transactionsPrevMonth !== undefined) setDelta('txDelta', data.transactionsThisMonth - data.transactionsPrevMonth);
+
+      // If server provides a timestamp (preferred), use it
+      if(data.timestamp) setLastUpdated(data.timestamp);
+      else if(data.lastUpdated) setLastUpdated(data.lastUpdated);
+      else setLastUpdated();
+    }
+
+    // Create SSE and handle events robustly
+    let es;
+    function connectSse(){
+      if(es) try{ es.close(); }catch(e){}
+      es = new EventSource(streamUrl);
+
+      es.addEventListener('dashboard', e => {
+        try{
+          const payload = JSON.parse(e.data);
+          if(!lastData) log('INIT','Initial dashboard data received');
+          else log('UPDATE','Dashboard updated');
+          lastData = payload;
+          render(payload);
+        }catch(err){
+          console.error('Invalid SSE data', err);
+          log('ERROR','Invalid SSE payload');
+        }
+        document.getElementById('status').textContent = 'Live: connected';
+      });
+
+      es.onopen = () => document.getElementById('status').textContent = 'Live: connection opened';
+      es.onerror = () => {
+        document.getElementById('status').textContent = 'Live: connection lost, retrying...';
+        log('ERROR','SSE connection error — will retry automatically');
+      };
+    }
+
+    connectSse();
+
+    // Refresh button: request server to broadcast and then fetch snapshot immediately
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      try {
+        await fetch(refreshUrl, { method: 'POST' });
+        log('REFRESH','Refresh requested (server broadcast)');
+      } catch (err) {
+        log('ERROR','Refresh request failed');
+      }
+      // Immediately update UI from summary so user sees instant result
+      try {
+        const r = await fetch(summaryUrl);
+        if (r.ok) {
+          const data = await r.json();
+          render(data);
+          log('REFRESH','UI updated from summary snapshot');
+        }
+      } catch (err) {
+        // ignore; SSE will update when available
+      }
+    });
+
+    // Interval control
+    document.getElementById('interval').addEventListener('change', (e) => {
+      const s = Number(e.target.value) || 5;
+      fetch(intervalUrl + '?seconds=' + s, { method: 'POST' })
+        .then(() => log('INFO','Refresh interval set to ' + s + 's'))
+        .catch(() => log('ERROR','Failed to set interval'));
+    });
+
+    // Toggle pause/resume
+    document.getElementById('btn-toggle').addEventListener('click', () => {
+      isPaused = !isPaused;
+      // The backend expects enabled=true to allow automatic refresh
+      fetch(toggleUrl + '?enabled=' + (!isPaused), { method: 'POST' })
+        .then(() => {
+          document.getElementById('btn-toggle').textContent = isPaused ? 'Resume' : 'Pause';
+          log('INFO', (isPaused ? 'Paused' : 'Resumed') + ' automatic refresh');
+        })
+        .catch(() => log('ERROR','Failed to toggle refresh'));
+    });
+
+    // Periodically refresh client count
+    async function refreshClients(){
+      try{
+        const r = await fetch(clientsUrl);
+        if(!r.ok) return;
+        const n = await r.json();
+        document.getElementById('clientCount').textContent = 'Connected clients: ' + n;
+      }catch(e){ /* ignore */ }
+    }
+    setInterval(refreshClients, 5000);
+    refreshClients();
+
+    // Fallback: load a snapshot on start (summary) if SSE misses initial
+    (async ()=>{
+      try{
+        const r = await fetch(summaryUrl);
+        if(r.ok){
+          const data = await r.json();
+          if(!lastData){ render(data); log('SNAP','Loaded snapshot from summary'); }
+        }
+      }catch(e){}
+    })();
+
+    // --- Transaction Volume Chart -------------------------------------------------
+    // Load Chart.js from CDN
+    function injectChartJs(){
+      if(window.Chart) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+      });
+    }
+
+    let txChart = null;
+    async function loadTxVolumeChart(months=6){
+      try{
+        await injectChartJs();
+        const r = await fetch('/api/admin/dashboard/monthly-volume?months='+months);
+        if(!r.ok) return;
+        const json = await r.json();
+        const labels = json.labels || [];
+        const volumes = json.volumes || [];
+        const txs = json.transactions || [];
+
+        const ctx = document.getElementById('txVolumeChart').getContext('2d');
+
+        // If chart exists, update
+        if(txChart){
+          txChart.data.labels = labels;
+          txChart.data.datasets[0].data = volumes;
+          txChart.data.datasets[1].data = txs;
+          txChart.update();
+          return;
+        }
+
+        txChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Volume (tCO2e)',
+                data: volumes,
+                backgroundColor: 'rgba(20,160,140,0.12)',
+                borderColor: 'rgba(20,160,140,0.95)',
+                fill: true,
+                yAxisID: 'y',
+                tension: 0.35,
+                pointRadius: 3
+              },
+              {
+                label: 'Transactions',
+                data: txs,
+                backgroundColor: 'rgba(124,58,237,0.06)',
+                borderColor: 'rgba(124,58,237,0.95)',
+                fill: false,
+                yAxisID: 'y_right',
+                tension: 0.2,
+                pointRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' } },
+            scales: {
+              y: {
+                type: 'linear',
+                position: 'left',
+                ticks: { callback: function(v){ return Number(v).toLocaleString(); } }
+              },
+              y_right: {
+                type: 'linear',
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: { callback: function(v){ return v; } }
+              }
+            }
+          }
+        });
+      }catch(err){ console.error('Failed to load tx volume chart', err); }
+    }
+
+    // Load chart initially
+    loadTxVolumeChart(6);
+
+    // Refresh chart when manual refresh is requested
+    const oldRefresh = document.getElementById('btn-refresh').onclick;
+    document.getElementById('btn-refresh').addEventListener('click', () => loadTxVolumeChart(6));
+
+    // --- Credit Status Donut ----------------------------------------------------
+    let creditChart = null;
+    async function loadCreditStatus(){
+      try{
+        await injectChartJs();
+        const r = await fetch('/api/admin/dashboard/credit-status');
+        if(!r.ok) return;
+        const j = await r.json();
+        const total = j.total || 0;
+        const available = j.available || 0;
+        const listed = j.listed || 0;
+        const sold = j.sold || 0;
+
+        const ctx = document.getElementById('creditDonut').getContext('2d');
+        const data = [available, listed, sold];
+        if(creditChart){
+          creditChart.data.datasets[0].data = data; creditChart.update();
+        } else {
+          creditChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Available','Listed','Sold'],
+              datasets: [{ data: data, backgroundColor: ['#10b981','#06b6d4','#7c3aed'] }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+          });
+        }
+
+        // Render legend with amounts
+        const legend = document.getElementById('creditLegend');
+        legend.innerHTML = '';
+        const rows = [
+          ['Available', available, '#10b981'],
+          ['Listed', listed, '#06b6d4'],
+          ['Sold', sold, '#7c3aed']
+        ];
+        rows.forEach(rw => {
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex'; wrap.style.justifyContent = 'space-between'; wrap.style.alignItems='center'; wrap.style.padding='6px 8px';
+          const left = document.createElement('div'); left.style.display='flex'; left.style.alignItems='center';
+          const dot = document.createElement('span'); dot.style.width='12px'; dot.style.height='12px'; dot.style.borderRadius='50%'; dot.style.display='inline-block'; dot.style.marginRight='8px'; dot.style.background = rw[2];
+          left.appendChild(dot); left.appendChild(document.createTextNode(rw[0]));
+          const right = document.createElement('div'); right.textContent = (typeof rw[1] === 'number' ? Number(rw[1]).toLocaleString() : rw[1]) + ' tCO2e';
+          wrap.appendChild(left); wrap.appendChild(right);
+          legend.appendChild(wrap);
+        });
+
+      }catch(err){ console.error('credit status load failed', err); }
+    }
+
+    loadCreditStatus();
+
+    // Refresh both charts on manual refresh
+    document.getElementById('btn-refresh').addEventListener('click', () => { loadTxVolumeChart(6); loadCreditStatus(); });
+  </script>
+</body>
+</html>

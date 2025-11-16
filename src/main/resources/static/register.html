@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Register - Carbon Credit Marketplace</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body{font-family:Segoe UI,Roboto,Arial;margin:0;padding:20px;background:linear-gradient(135deg,#39b385 0%,#9be15d 100%);min-height:100vh;display:flex;align-items:center;justify-content:center}
+        .card{width:460px;background:#fff;border-radius:10px;padding:20px 24px;box-shadow:0 12px 30px rgba(0,0,0,0.12)}
+        .tabs{display:flex;gap:8px;background:#f1f4f8;padding:6px;border-radius:20px;margin-bottom:18px}
+        .tabs button{flex:1;padding:8px 12px;border-radius:16px;border:none;background:transparent;cursor:pointer;color:#333}
+        .tabs button.active{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+
+        h2{margin:6px 0 14px 0;font-weight:600}
+
+        label{display:block;font-size:14px;margin-top:10px;color:#333}
+        input[type=email],input[type=password],input[type=text]{width:100%;padding:10px;border:1px solid #e6eef3;border-radius:8px;margin-top:6px;font-size:14px}
+        .submit{margin-top:18px;width:100%;padding:12px;background:linear-gradient(90deg,#06b26e,#059e63);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px}
+        .submit:hover{opacity:0.95}
+        .muted{color:#6b7280;font-size:13px;text-align:center;margin-top:12px}
+        a.sign{color:#0b8f57;font-weight:600;text-decoration:none}
+        .msg{margin-top:10px;color:#b00020;min-height:18px;text-align:center;font-size:13px}
+        .msg.success{color:#059e63}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="tabs" role="tablist">
+            <button id="tabUser" class="active" aria-pressed="true">EV Owner / Buyer</button>
+            <button id="tabAdmin" aria-pressed="false">Admin / CVA</button>
+        </div>
+
+        <div id="formArea">
+            <h2 id="formTitle">Create User Account</h2>
+
+            <form id="registerForm">
+                <input type="hidden" name="role" id="roleInput" value="user">
+                
+                <label>Full Name
+                    <input type="text" name="fullName" required placeholder="John Doe">
+                </label>
+                
+                <label>Email
+                    <input type="email" name="email" required placeholder="user@example.com">
+                </label>
+                
+                <label>Password
+                    <input type="password" name="password" required placeholder="●●●●●●●">
+                </label>
+                
+                <label>Confirm Password
+                    <input type="password" name="confirmPassword" required placeholder="●●●●●●●">
+                </label>
+
+                <button type="submit" id="submitBtn" class="submit">Create User Account</button>
+            </form>
+
+            <div id="result" class="msg"></div>
+
+            <div id="loginArea" class="muted">Already have an account? <a class="sign" href="/login.html">Sign in</a></div>
+        </div>
+    </div>
+
+    <script>
+        // UI elements
+        const tabUser = document.getElementById('tabUser');
+        const tabAdmin = document.getElementById('tabAdmin');
+        const roleInput = document.getElementById('roleInput');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const loginArea = document.getElementById('loginArea');
+        const result = document.getElementById('result');
+
+        // Default is user
+        function showUser(){
+            tabUser.classList.add('active'); tabUser.setAttribute('aria-pressed','true');
+            tabAdmin.classList.remove('active'); tabAdmin.setAttribute('aria-pressed','false');
+            roleInput.value = 'user';
+            formTitle.textContent = 'Create User Account';
+            submitBtn.textContent = 'Create User Account';
+            loginArea.style.display = 'block';
+            result.textContent = '';
+        }
+
+        function showAdmin(){
+            tabAdmin.classList.add('active'); tabAdmin.setAttribute('aria-pressed','true');
+            tabUser.classList.remove('active'); tabUser.setAttribute('aria-pressed','false');
+            roleInput.value = 'admin';
+            formTitle.textContent = 'Create Admin Account';
+            submitBtn.textContent = 'Create Admin Account';
+            loginArea.style.display = 'none';
+            result.textContent = '';
+        }
+
+        tabUser.addEventListener('click', showUser);
+        tabAdmin.addEventListener('click', showAdmin);
+
+        // Form submission logic
+        const form = document.getElementById('registerForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            result.textContent = '';
+            const data = Object.fromEntries(new FormData(form).entries());
+
+            // Validate
+            if (data.password !== data.confirmPassword) {
+                result.textContent = 'Passwords do not match';
+                return;
+            }
+
+            if (data.password.length < 6) {
+                result.textContent = 'Password must be at least 6 characters';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/users/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: data.email,
+                        password: data.password,
+                        fullName: data.fullName
+                    })
+                });
+                const json = await res.json().catch(() => null);
+                if (res.ok) {
+                    result.textContent = 'Account created successfully! Redirecting...';
+                    result.classList.add('success');
+                    setTimeout(() => {
+                        window.location.href = '/login.html';
+                    }, 1500);
+                } else {
+                    result.textContent = json && json.message ? json.message : 'Registration failed';
+                }
+            } catch (err) {
+                result.textContent = 'Error: ' + err.message;
+            }
+        });
+
+        // Keyboard: allow Enter on tabs
+        tabUser.addEventListener('keydown', (e)=>{ if(e.key==='Enter') showUser(); });
+        tabAdmin.addEventListener('keydown', (e)=>{ if(e.key==='Enter') showAdmin(); });
+    </script>
+</body>
+</html>

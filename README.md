@@ -1,9 +1,10 @@
-# Spring Boot Demo Project
+# Carbon Credit Marketplace
 
-Dự án Spring Boot demo với MySQL, chạy trên Docker Compose.
+Full-stack monorepo containing a Spring Boot backend and a React + TypeScript frontend for managing carbon credit listings, transactions, and wallets.
 
-## Công nghệ sử dụng
+## Tech Stack
 
+### Backend
 - **Java 21**
 - **Spring Boot 3.2.0**
 - **Maven**
@@ -11,6 +12,15 @@ Dự án Spring Boot demo với MySQL, chạy trên Docker Compose.
 - **Docker & Docker Compose**
 - **Flyway** (Database Migration)
 - **Lombok**
+
+### Frontend
+- **Vite 5**
+- **React 18**
+- **TypeScript 5**
+- **TailwindCSS 3**
+- **ShadCN UI**
+- **TanStack Query (React Query)**
+- **React Router**
 
 ## Dependencies chính
 
@@ -21,80 +31,148 @@ Dự án Spring Boot demo với MySQL, chạy trên Docker Compose.
 - Flyway Core & MySQL
 - Lombok
 
-## Cấu trúc project
+## Project Structure
 
 ```
-├── src/
+CCMfEO/
+├── frontend/                    # React + Vite frontend
+│   ├── src/
+│   │   ├── components/          # UI components (ShadCN)
+│   │   ├── pages/               # Page components
+│   │   ├── layouts/             # Layout wrappers
+│   │   ├── contexts/            # React contexts (Auth, etc.)
+│   │   ├── hooks/               # Custom hooks
+│   │   ├── router/              # Route definitions
+│   │   ├── services/            # API client services
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   └── package.json
+│
+├── src/                         # Spring Boot backend
 │   ├── main/
 │   │   ├── java/com/example/demo/
-│   │   │   ├── entity/User.java
-│   │   │   ├── repository/UserRepository.java
-│   │   │   ├── controller/UserController.java
+│   │   │   ├── controller/      # REST controllers
+│   │   │   ├── service/         # Business logic
+│   │   │   ├── repository/      # JPA repositories
+│   │   │   ├── entity/          # JPA entities
+│   │   │   ├── dto/             # Data transfer objects
 │   │   │   └── DemoApplication.java
 │   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── application-dev.yml
-│   │       ├── application-docker.yml
-│   │       └── db/migration/V1__init.sql
+│   │       ├── application*.yml
+│   │       ├── db/migration/    # Flyway migrations
+│   │       └── static/          # Static files (frontend build output)
+│   └── test/
+│
 ├── Dockerfile
 ├── docker-compose.yml
 ├── Makefile
-└── pom.xml
+├── pom.xml
+└── README.md
 ```
 
-## Cách chạy project
+## Getting Started
 
-### 1. Chạy với Docker Compose (Recommended)
+### Prerequisites
+- **Java 21**
+- **Node.js 18+** and **npm**
+- **Docker & Docker Compose** (optional, for containerized deployment)
 
-```bash
-# Build và chạy tất cả services
-docker compose up -d --build
+### Quick Start (Development)
 
-# Hoặc sử dụng Makefile
-make up
-```
+#### 1. Start Backend (Spring Boot)
 
-Services sẽ chạy trên:
-- **Application**: http://localhost:8080
-- **MySQL**: localhost:3306
-- **Adminer** (Database UI): http://localhost:8081
-
-### 2. Chạy local development
-
-Trước tiên, chạy MySQL trong Docker:
+First, start MySQL in Docker:
 ```bash
 docker compose up -d db
 ```
 
-Sau đó chạy application với profile `dev`:
+Then run the Spring Boot application:
 ```bash
-# Sử dụng Maven
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-# Hoặc sử dụng Makefile
+# Or using Makefile
 make run
 ```
 
+Backend will be available at **http://localhost:8080**
+
+#### 2. Start Frontend (Vite + React)
+
+In a new terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will be available at **http://localhost:5173**
+
+The dev server proxies `/api` requests to the backend at `http://localhost:8080`.
+
+### Production Build & Deployment
+
+#### Build Frontend
+```bash
+cd frontend
+npm run build
+```
+
+This generates a production-optimized build in `frontend/dist/`.
+
+#### Copy Frontend Build to Spring Boot Static Resources
+```bash
+# From project root
+cp -r frontend/dist/* src/main/resources/static/
+```
+
+Now when you start Spring Boot, it will serve the frontend from `http://localhost:8080`.
+
+#### Run Full Stack with Docker Compose
+```bash
+docker compose up -d --build
+
+# Or using Makefile
+make up
+```
+
+Services will run on:
+- **Application (Backend + Frontend)**: http://localhost:8080
+- **MySQL**: localhost:3306
+- **Adminer** (Database UI): http://localhost:8081
+
 ## API Endpoints
 
-### GET /api/users
-Lấy danh sách tất cả users
+### Authentication
+- `POST /api/users/register` - Register new user
+- `POST /api/users/login` - Login user
 
-```bash
-curl -X GET http://localhost:8080/api/users
-```
+### Users
+- `GET /api/users` - Get all users
+- `POST /api/users` - Create user
 
-### POST /api/users
-Tạo user mới
+### Listings
+- `GET /api/listings` - Get all listings (paginated)
+- `GET /api/listings/open` - Get open listings
+- `GET /api/listings/{id}` - Get listing by ID
+- `POST /api/listings` - Create new listing
+- `PUT /api/listings/{id}` - Update listing
+- `DELETE /api/listings/{id}` - Delete listing
 
-```bash
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "fullName": "John Doe"
-  }'
-```
+### Transactions
+- `GET /api/transactions/mine?userId={id}` - Get user transactions
+- `POST /api/transactions` - Create transaction (purchase)
+- `POST /api/transactions/{id}/confirm` - Confirm transaction
+- `POST /api/transactions/{id}/cancel` - Cancel transaction
+
+### Wallet
+- `GET /api/wallet/{userId}/balance` - Get wallet balance
+- `POST /api/wallet/{userId}/credit` - Add credits to wallet
+- `POST /api/wallet/{userId}/debit` - Deduct credits from wallet
 
 ## Makefile Commands
 

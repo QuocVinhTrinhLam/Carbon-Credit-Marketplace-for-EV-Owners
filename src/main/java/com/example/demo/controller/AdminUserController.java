@@ -4,6 +4,7 @@ import com.example.demo.dto.UserUpdateRequest;
 import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import com.example.demo.entity.UserStatusRecord;
+import com.example.demo.repository.*;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.UserStatusRepository;
@@ -23,6 +24,8 @@ public class AdminUserController {
     private final UserRepository userRepository;
     private final UserStatusRepository userStatusRepository;
     private final RoleRepository roleRepository;
+    private final WalletRepository walletRepository;
+    private final CarbonWalletRepository carbonWalletRepository;
 
     @GetMapping
     public ResponseEntity<?> getAllUsers() {
@@ -123,5 +126,85 @@ public class AdminUserController {
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "User not found")));
+    }
+
+    /**
+     * Get user wallet information (both money and carbon wallets)
+     */
+    @GetMapping("/{id}/wallets")
+    public ResponseEntity<?> getUserWallets(@PathVariable Long id) {
+        try {
+            var user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            var moneyWallet = walletRepository.findByUserId(id);
+            var carbonWallet = carbonWalletRepository.findByOwner_Id(id);
+
+            Map<String, Object> wallets = new HashMap<>();
+            wallets.put("userId", id);
+            wallets.put("moneyWallet", moneyWallet != null ? Map.of(
+                    "balance", moneyWallet.getBalance(),
+                    "walletId", moneyWallet.getId()
+            ) : null);
+            wallets.put("carbonWallet", carbonWallet.map(cw -> Map.of(
+                    "balance", cw.getBalance(),
+                    "walletId", cw.getId()
+            )).orElse(null));
+
+            return ResponseEntity.ok(wallets);
+        } catch (Exception e) {
+            log.error("Error fetching wallets for user {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Assign role to user
+     */
+    @PostMapping("/{id}/roles/{roleName}")
+    public ResponseEntity<?> assignRole(@PathVariable Long id, @PathVariable String roleName) {
+        try {
+            var user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            var role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
+
+            user.getRoles().add(role);
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Role assigned successfully",
+                    "userId", id,
+                    "role", roleName
+            ));
+        } catch (Exception e) {
+            log.error("Error assigning role: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Remove role from user
+     */
+    @DeleteMapping("/{id}/roles/{roleName}")
+    public ResponseEntity<?> removeRole(@PathVariable Long id, @PathVariable String roleName) {
+        try {
+            var user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            user.getRoles().removeIf(role -> role.getName().equals(roleName));
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Role removed successfully",
+                    "userId", id,
+                    "role", roleName
+            ));
+        } catch (Exception e) {
+            log.error("Error removing role: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

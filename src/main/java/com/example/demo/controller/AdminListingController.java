@@ -64,4 +64,83 @@ public class AdminListingController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Collections.singletonMap("error", "Listing not found")));
     }
+
+    /**
+     * Approve a listing
+     */
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveListing(@PathVariable Long id) {
+        log.info("Admin - Approve listing ID: {}", id);
+        return listingRepository.findById(id)
+                .<ResponseEntity<?>>map(l -> {
+                    l.setStatus(Listing.ListingStatus.APPROVED);
+                    listingRepository.save(l);
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Listing approved successfully",
+                            "id", id,
+                            "status", "APPROVED"
+                    ));
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Listing not found")));
+    }
+
+    /**
+     * Reject a listing
+     */
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectListing(@PathVariable Long id, @RequestParam String reason) {
+        log.info("Admin - Reject listing ID: {} with reason: {}", id, reason);
+        return listingRepository.findById(id)
+                .<ResponseEntity<?>>map(l -> {
+                    l.setStatus(Listing.ListingStatus.REJECTED);
+                    listingRepository.save(l);
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Listing rejected successfully",
+                            "id", id,
+                            "status", "REJECTED",
+                            "reason", reason
+                    ));
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Listing not found")));
+    }
+
+    /**
+     * Get listing statistics
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<?> getListingStats() {
+        log.info("Admin - Get listing statistics");
+        
+        long total = listingRepository.count();
+        long open = listingRepository.countByStatus(Listing.ListingStatus.OPEN);
+        long sold = listingRepository.countByStatus(Listing.ListingStatus.SOLD);
+        long cancelled = listingRepository.countByStatus(Listing.ListingStatus.CANCELLED);
+
+        return ResponseEntity.ok(Map.of(
+                "total", total,
+                "open", open,
+                "sold", sold,
+                "cancelled", cancelled
+        ));
+    }
+
+    /**
+     * Delete a listing (admin force delete)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteListing(@PathVariable Long id) {
+        log.info("Admin - Delete listing ID: {}", id);
+        return listingRepository.findById(id)
+                .<ResponseEntity<?>>map(l -> {
+                    listingRepository.delete(l);
+                    return ResponseEntity.ok(Map.of(
+                            "message", "Listing deleted successfully",
+                            "id", id
+                    ));
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Listing not found")));
+    }
 }

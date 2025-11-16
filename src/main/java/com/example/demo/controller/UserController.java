@@ -53,16 +53,36 @@ public class UserController {
 
         if (userRepository.existsByEmail(req.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new AuthResponse("Email already exists", null));
+                    .body(AuthResponse.builder()
+                            .message("Email already exists")
+                            .build());
         }
 
         if (req.getFullName() == null || req.getFullName().isBlank()) {
-            return ResponseEntity.badRequest().body(new AuthResponse("Full name is required", null));
+            return ResponseEntity.badRequest()
+                    .body(AuthResponse.builder()
+                            .message("Full name is required")
+                            .build());
         }
 
         User saved = authService.register(req.getEmail(), req.getPassword(), req.getFullName());
+        
+        // Generate JWT token
+        String token = authService.generateToken(saved);
+        
+        List<String> roles = saved.getRoles().stream()
+                .map(role -> role.getName())
+                .collect(java.util.stream.Collectors.toList());
+        
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthResponse("Registered successfully", saved.getId()));
+                .body(AuthResponse.builder()
+                        .message("Registered successfully")
+                        .userId(saved.getId())
+                        .email(saved.getEmail())
+                        .fullName(saved.getFullName())
+                        .token(token)
+                        .roles(roles)
+                        .build());
     }
 
     @PostMapping("/login")
@@ -72,14 +92,32 @@ public class UserController {
                 .map(user -> {
                     boolean ok = authService.checkPassword(req.getPassword(), user.getPassword());
                     if (ok) {
-                        return ResponseEntity.ok(new AuthResponse("Login successful", user.getId()));
+                        // Generate JWT token
+                        String token = authService.generateToken(user);
+                        
+                        List<String> roles = user.getRoles().stream()
+                                .map(role -> role.getName())
+                                .collect(java.util.stream.Collectors.toList());
+                        
+                        return ResponseEntity.ok(AuthResponse.builder()
+                                .message("Login successful")
+                                .userId(user.getId())
+                                .email(user.getEmail())
+                                .fullName(user.getFullName())
+                                .token(token)
+                                .roles(roles)
+                                .build());
                     } else {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(new AuthResponse("Invalid credentials", null));
+                                .body(AuthResponse.builder()
+                                        .message("Invalid credentials")
+                                        .build());
                     }
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new AuthResponse("Invalid credentials", null)));
+                        .body(AuthResponse.builder()
+                                .message("Invalid credentials")
+                                .build()));
     }
 }
 

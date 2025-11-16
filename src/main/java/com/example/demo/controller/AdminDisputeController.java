@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/disputes")
@@ -21,6 +22,33 @@ public class AdminDisputeController {
 
     private final DisputeRepository disputeRepository;
     private final TransactionRepository transactionRepository;
+
+    /**
+     * Get all disputes
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllDisputes() {
+        log.info("Admin - Get all disputes");
+        var disputes = disputeRepository.findAll();
+        return ResponseEntity.ok(Map.of(
+                "disputes", disputes,
+                "total", disputes.size()
+        ));
+    }
+
+    /**
+     * Get disputes by status
+     */
+    @GetMapping("/status/{status}")
+    public ResponseEntity<?> getDisputesByStatus(@PathVariable DisputeStatus status) {
+        log.info("Admin - Get disputes by status: {}", status);
+        var disputes = disputeRepository.findByStatus(status);
+        return ResponseEntity.ok(Map.of(
+                "disputes", disputes,
+                "total", disputes.size(),
+                "status", status
+        ));
+    }
 
     // mở tranh chấp
     @PostMapping("/{txId}/open")

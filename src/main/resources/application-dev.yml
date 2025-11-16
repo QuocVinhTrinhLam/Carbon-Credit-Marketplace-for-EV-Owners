@@ -4,21 +4,37 @@ spring:
     username: appuser
     password: secret
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none     # <- TẮT Hibernate tự thay đổi schema
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    validate-on-migrate: true
+    baseline-on-migrate: false         # Database clean, không cần baseline
+    # clean-disabled: false            # (tùy chọn) cho phép clean ở môi trường dev
+    # out-of-order: false              # chỉ bật true nếu CÓ CHỦ ĐÍCH chạy version cũ sau version mới (hiếm)
 
 logging:
   level:
     com.example.demo: DEBUG
     org.springframework.web: DEBUG
     org.flywaydb: DEBUG
+
+# VNPay Configuration (Sandbox)
+vnpay:
+  tmn-code: XUFPX320  # Terminal ID từ VNPay Sandbox
+  hash-secret: 216M8O2A3QL1FESRY97R2MY2MIY32G0O  # Secret Key từ VNPay Sandbox
+  pay-url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  return-url: http://localhost:5173/vnpay-return
+  ipn-url: http://localhost:8083/api/payment/vnpay/ipn
+  version: 2.1.0
+  command: pay
+  curr-code: VND

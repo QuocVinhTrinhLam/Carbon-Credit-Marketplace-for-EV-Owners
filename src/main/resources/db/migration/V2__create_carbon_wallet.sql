@@ -2,7 +2,7 @@
 CREATE TABLE carbon_wallet (
                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                owner_id BIGINT NOT NULL,
-                               balance DECIMAL(10, 2) DEFAULT 0,
+                               balance DECIMAL(19, 4) DEFAULT 0,
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                                INDEX idx_owner_id (owner_id),

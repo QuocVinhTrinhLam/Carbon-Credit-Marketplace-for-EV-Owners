@@ -1,0 +1,367 @@
+{
+	"info": {
+		"_postman_id": "carbon-credit-marketplace-2025",
+		"name": "Carbon Credit Marketplace - Complete API Collection",
+		"description": "Comprehensive API collection for Carbon Credit Marketplace with all endpoints tested and verified",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\",\n  \"fullName\": \"John Doe\"\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/users/register", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "users", "register"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/users/login", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "users", "login"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/users", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "users"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"seller@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Seller User\"\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/users", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "users"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Listings",
+			"item": [
+				{
+					"name": "Create Listing",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Premium Carbon Credits\",\n  \"description\": \"Verified carbon offset credits from renewable energy projects\",\n  \"carbonAmount\": 250.75,\n  \"price\": 12500.00,\n  \"sellerId\": 1\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/listings", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Listings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings?page=0&size=20", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings"], "query": [{"key": "page", "value": "0"}, {"key": "size", "value": "20"}]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Open Listings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings/open?page=0&size=20", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "open"], "query": [{"key": "page", "value": "0"}, {"key": "size", "value": "20"}]}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Listings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings/search?keyword=carbon&page=0&size=20", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "search"], "query": [{"key": "keyword", "value": "carbon"}, {"key": "page", "value": "0"}, {"key": "size", "value": "20"}]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Listing by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Listings by Seller",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings/seller/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "seller", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Listing",
+					"request": {
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Premium Carbon Credits\",\n  \"description\": \"Updated description\",\n  \"carbonAmount\": 300.00,\n  \"price\": 15000.00,\n  \"sellerId\": 1\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/listings/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Listing",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/listings/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "listings", "1"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "Create Transaction",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"buyerId\": 2,\n  \"listingId\": 1,\n  \"amount\": 5000.00\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/transactions", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/mine?userId=1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "mine"], "query": [{"key": "userId", "value": "1"}]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Buyer",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/buyer/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "buyer", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transactions by Seller",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/seller/1", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "seller", "1"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Confirm Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/1/confirm", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "1", "confirm"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/transactions/1/cancel", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "transactions", "1", "cancel"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Wallet Management",
+			"item": [
+				{
+					"name": "Get Wallet Balance",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/wallet/1/balance", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "wallet", "1", "balance"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Credit Wallet",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/wallet/1/credit?amount=1000.50&description=Initial deposit", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "wallet", "1", "credit"], "query": [{"key": "amount", "value": "1000.50"}, {"key": "description", "value": "Initial deposit"}]}
+					},
+					"response": []
+				},
+				{
+					"name": "Debit Wallet",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/wallet/1/debit?amount=500.00&description=Purchase payment", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "wallet", "1", "debit"], "query": [{"key": "amount", "value": "500.00"}, {"key": "description", "value": "Purchase payment"}]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Credit Requests",
+			"item": [
+				{
+					"name": "Submit Credit Request",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ownerId\": 1,\n  \"carbonAmount\": 150.0,\n  \"status\": \"PENDING\",\n  \"journeyData\": \"Details about CO2 reduction journey\",\n  \"evidence\": \"Supporting evidence and documents\"\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/credit-requests", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "credit-requests"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Credit Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/credit-requests/1/approve", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "credit-requests", "1", "approve"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Credit Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/credit-requests/1/reject?reason=Insufficient evidence", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "credit-requests", "1", "reject"], "query": [{"key": "reason", "value": "Insufficient evidence"}]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "CO2 Reduction",
+			"item": [
+				{
+					"name": "Create CO2 Reduction Record",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"user123\",\n  \"baseline\": 5000.50,\n  \"actual\": 3500.25,\n  \"reduction\": 1500.25,\n  \"certified\": false,\n  \"status\": \"PENDING\"\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/co2", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "co2"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Get CO2 Records by User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/api/co2/user/user123", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "co2", "user", "user123"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "VNPay Payment",
+			"item": [
+				{
+					"name": "Create Payment",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 100000,\n  \"orderInfo\": \"Top up wallet\",\n  \"userId\": 1\n}"
+						},
+						"url": {"raw": "http://localhost:8083/api/payment/vnpay/create", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["api", "payment", "vnpay", "create"]}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Actuator Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/actuator/health", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["actuator", "health"]}
+					},
+					"response": []
+				},
+				{
+					"name": "Actuator Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "http://localhost:8083/actuator/info", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["actuator", "info"]}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{"key": "baseUrl", "value": "http://localhost:8083", "type": "string"},
+		{"key": "userId", "value": "1", "type": "string"},
+		{"key": "listingId", "value": "1", "type": "string"}
+	]
+}
+

@@ -35,4 +35,9 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     
     @Query("SELECT l FROM Listing l WHERE l.title LIKE %:keyword% OR l.description LIKE %:keyword%")
     Page<Listing> findByKeyword(@Param("keyword") String keyword, Pageable pageable);
+    
+    // Admin queries
+    long countByStatus(ListingStatus status);
+    
+    List<Listing> findTop10ByOrderByCreatedAtDesc();
 }

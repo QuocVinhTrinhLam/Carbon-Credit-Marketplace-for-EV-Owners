@@ -1,70 +1,38 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "carbon_wallet")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CarbonWallet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Quan hệ 1-1 tới User (owner_id)
     @OneToOne
     @JoinColumn(name = "owner_id", referencedColumnName = "id", nullable = false, unique = true)
     private User owner;
 
     @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal balance;
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    @Column(name = "created_at")
-    private Timestamp createdAt;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    private Timestamp updatedAt;
-
-    // --- getters/setters ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public User getOwner() {
-        return owner;
-    }
-
-    public void setOwner(User owner) {
-        this.owner = owner;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
-    }
-
-    public void setBalance(BigDecimal balance) {
-        this.balance = balance;
-    }
-
-    public Timestamp getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Timestamp getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Timestamp updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    private LocalDateTime updatedAt;
 }

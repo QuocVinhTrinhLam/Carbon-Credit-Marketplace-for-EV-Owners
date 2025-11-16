@@ -23,9 +23,6 @@ public class Wallet {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance = BigDecimal.ZERO;   // chính xác số học
 
-    @Version
-    private Long version;                            // tránh race condition
-
     // ✅ Liên kết 1-1 với User
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)

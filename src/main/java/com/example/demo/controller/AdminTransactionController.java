@@ -1,6 +1,13 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.Transaction;
+import com.example.demo.entity.Dispute;
+import com.example.demo.entity.DisputeStatus;
+import com.example.demo.entity.DisputeResolution;
+import com.example.demo.repository.TransactionRepository;
+import com.example.demo.repository.DisputeRepository;
+
+import com.example.demo.entity.Transaction;
 import com.example.demo.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +23,7 @@ import java.util.*;
 public class AdminTransactionController {
 
     private final TransactionRepository transactionRepository;
+    private final DisputeRepository disputeRepository;
 
     // ✅ Lấy toàn bộ giao dịch
     @GetMapping
@@ -119,5 +127,41 @@ public class AdminTransactionController {
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "Transaction not found")));
+    }
+
+    /**
+     * Get disputes for a transaction
+     */
+    @GetMapping("/{id}/disputes")
+    public ResponseEntity<?> getTransactionDisputes(@PathVariable Long id) {
+        log.info("Admin - Get disputes for transaction ID: {}", id);
+        
+        if (!transactionRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Transaction not found"));
+        }
+
+        List<Dispute> disputes = disputeRepository.findAll().stream()
+                .filter(d -> d.getTransaction() != null && d.getTransaction().getId().equals(id))
+                .toList();
+
+        return ResponseEntity.ok(Map.of(
+                "transactionId", id,
+                "disputes", disputes,
+                "count", disputes.size()
+        ));
+    }
+
+    /**
+     * Get all pending disputes
+     */
+    @GetMapping("/disputes/pending")
+    public ResponseEntity<?> getPendingDisputes() {
+        log.info("Admin - Get all pending disputes");
+        List<Dispute> disputes = disputeRepository.findByStatus(DisputeStatus.PENDING);
+        return ResponseEntity.ok(Map.of(
+                "disputes", disputes,
+                "count", disputes.size()
+        ));
     }
 }

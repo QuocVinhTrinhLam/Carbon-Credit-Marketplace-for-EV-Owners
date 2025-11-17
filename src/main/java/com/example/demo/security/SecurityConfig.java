@@ -43,8 +43,8 @@ public class SecurityConfig {
                                 "/api/users/login",
                                 "/actuator/**",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/api/payment/vnpay/ipn"  // VNPay IPN callback (public)
+                                "/api/payment/vnpay/ipn",
+                                "/api/payment/vnpay/return"  // VNPay IPN callback (public)
                         ).permitAll()
                         
                         // VNPay payment endpoints (authenticated)

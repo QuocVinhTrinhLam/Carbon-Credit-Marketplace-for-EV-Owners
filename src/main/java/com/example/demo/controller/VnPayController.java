@@ -108,7 +108,7 @@ public class VnPayController {
                     "RspCode", "00",
                     "Message", "Confirm Success"
             ));
-            
+
         } catch (Exception e) {
             log.error("Error processing VNPay IPN: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of(
@@ -131,31 +131,28 @@ public class VnPayController {
             // Log để debug
             log.info("Return params: vnp_TxnRef={}, vnp_ResponseCode={}, vnp_TransactionStatus={}", 
                     params.get("vnp_TxnRef"), params.get("vnp_ResponseCode"), params.get("vnp_TransactionStatus"));
-            
-            // Verify signature
+
+            String vnpTxnRef = params.get("vnp_TxnRef");
+            String vnpResponseCode = params.get("vnp_ResponseCode");
+            String vnpTransactionStatus = params.get("vnp_TransactionStatus");
+            String vnpAmount = params.get("vnp_Amount");
+
+            // Verify signature (sau khi đã log params cần thiết)
             if (!vnPayService.verifyIpn(params)) {
                 log.warn("Invalid VNPay return signature");
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "Invalid signature"));
             }
-            
-            String vnpTxnRef = params.get("vnp_TxnRef");
-            String vnpResponseCode = params.get("vnp_ResponseCode");
-            String vnpTransactionStatus = params.get("vnp_TransactionStatus");
-            String vnpAmount = params.get("vnp_Amount");
-            
-            // QUAN TRỌNG: Xử lý payment ngay tại return URL
-            // Vì IPN có thể không được gọi nếu server là localhost
-            if ("00".equals(vnpResponseCode) && "00".equals(vnpTransactionStatus)) {
-                log.info("Processing payment from return URL for txnRef: {}", vnpTxnRef);
-                try {
-                    // Process payment (giống như IPN)
-                    vnPayService.processIpn(params);
-                    log.info("Payment processed successfully from return URL");
-                } catch (Exception e) {
-                    log.error("Error processing payment from return URL: {}", e.getMessage(), e);
-                    // Vẫn trả về success để user không bị redirect lỗi
-                }
+
+            // Luôn cố gắng xử lý giao dịch tại return URL để đảm bảo ví được cập nhật
+            // kể cả khi IPN không gọi về được (ví dụ khi chạy localhost)
+            log.info("Processing payment from return URL for txnRef: {}", vnpTxnRef);
+            try {
+                vnPayService.processIpn(params);
+                log.info("Payment processed successfully from return URL");
+            } catch (Exception e) {
+                log.error("Error processing payment from return URL: {}", e.getMessage(), e);
+                // Vẫn trả về response để người dùng được chuyển hướng về trang kết quả
             }
             
             return ResponseEntity.ok(Map.of(

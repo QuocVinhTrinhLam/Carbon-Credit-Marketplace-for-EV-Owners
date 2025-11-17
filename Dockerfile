@@ -21,19 +21,17 @@ FROM maven:3.9.8-eclipse-temurin-21 AS backend-build
 
 WORKDIR /app
 
-# Cache Maven dependencies first
+# Copy pom để cache dependency
 COPY pom.xml ./
-RUN mvn -B -q dependency:go-offline
 
-# Copy backend sources
+# Tải dependency 1 lần (nhanh hơn go-offline)
+RUN mvn -B -q dependency:resolve
+
+# Copy source
 COPY src ./src
 
-# Copy the built frontend assets into Spring Boot static resources
-RUN mkdir -p src/main/resources/static
-COPY --from=frontend-build /frontend/dist ./src/main/resources/static
-
-# Package the backend (skip tests for faster container builds)
-RUN mvn -B clean package -DskipTests
+# Build jar (skip test cho nhanh)
+RUN mvn -B -DskipTests clean package
 
 # =========================================
 # Stage 3: Runtime (Spring Boot JRE)

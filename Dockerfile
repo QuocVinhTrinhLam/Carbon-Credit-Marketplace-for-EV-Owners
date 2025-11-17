@@ -1,20 +1,17 @@
 # =========================================
 # Stage 1: Build Frontend (React/Vite)
 # =========================================
-FROM node:20 AS frontend-build
+FROM node:20-alpine AS frontend-build
 
 WORKDIR /frontend
 
-# Copy package.json + package-lock.json để tận dụng cache
-COPY "C:/Users/MINH THU/frontend-ui/package*.json" ./
+# Only copy dependency manifests to leverage Docker layer cache
+COPY frontend/package*.json ./
 
-# Cài dependency
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
-# Copy toàn bộ source FE
-COPY "C:/Users/MINH THU/frontend-ui/" ./
-
-# Build FE
+# Copy the full frontend source and build the production bundle
+COPY frontend/ .
 RUN npm run build
 
 # =========================================
@@ -24,31 +21,29 @@ FROM maven:3.9.8-eclipse-temurin-21 AS backend-build
 
 WORKDIR /app
 
-# Copy pom.xml trước để cache dependency
-COPY "C:/Users/MINH THU/Carbon-Credit-Marketplace-for-EV-Owners/pom.xml" ./
-RUN mvn dependency:go-offline -B
+# Cache Maven dependencies first
+COPY pom.xml ./
+RUN mvn -B -q dependency:go-offline
 
-# Copy toàn bộ source BE
-COPY "C:/Users/MINH THU/Carbon-Credit-Marketplace-for-EV-Owners/src" ./src/
+# Copy backend sources
+COPY src ./src
 
-# Copy FE build vào target/classes/static để Spring Boot serve
-RUN mkdir -p target/classes/static
-COPY --from=frontend-build /frontend/build target/classes/static
+# Copy the built frontend assets into Spring Boot static resources
+RUN mkdir -p src/main/resources/static
+COPY --from=frontend-build /frontend/dist ./src/main/resources/static
 
-# Build jar BE
-RUN mvn clean package -DskipTests -B
+# Package the backend (skip tests for faster container builds)
+RUN mvn -B clean package -DskipTests
 
 # =========================================
-# Stage 3: Runtime (chạy Spring Boot)
+# Stage 3: Runtime (Spring Boot JRE)
 # =========================================
 FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-# Copy jar từ stage backend-build
 COPY --from=backend-build /app/target/*.jar app.jar
 
-# Thiết lập profile Spring Boot (nếu cần)
 ENV SPRING_PROFILES_ACTIVE=docker
 
 EXPOSE 8080

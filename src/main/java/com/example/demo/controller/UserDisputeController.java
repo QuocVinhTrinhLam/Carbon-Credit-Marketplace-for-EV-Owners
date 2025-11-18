@@ -1,5 +1,9 @@
 package com.example.demo.controller;
 
+import com.example.demo.config.RabbitMQConfig; 
+import com.example.demo.dto.DisputeCreatedEvent; 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 import com.example.demo.entity.Dispute;
 import com.example.demo.entity.DisputeStatus;
 import com.example.demo.repository.DisputeRepository;
@@ -21,6 +25,7 @@ public class UserDisputeController {
 
     private final DisputeRepository disputeRepository;
     private final TransactionRepository transactionRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     //User mở tranh chấp mới
     @PostMapping("/open")
@@ -68,15 +73,42 @@ public class UserDisputeController {
                     dispute.setStatus(DisputeStatus.OPEN);
                     dispute.setCreatedAt(LocalDateTime.now());
 
-                    disputeRepository.save(dispute);
+                    // 1. LƯU VÀO DATABASE
+                        Dispute savedDispute = disputeRepository.save(dispute);
+                        log.info("Dispute {} created successfully for transaction {}", savedDispute.getId(), txId);
 
-                    log.info("Dispute {} created successfully for transaction {}", dispute.getId(), txId);
-                    return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                            "message", "Dispute opened successfully",
-                            "disputeId", dispute.getId(),
-                            "transactionId", txId,
-                            "status", dispute.getStatus().name()
-                    ));
+                        // 2. BẮN EVENT SANG RABBITMQ
+                        try {
+                                // Tạo DTO event từ entity đã lưu
+                                DisputeCreatedEvent event = new DisputeCreatedEvent(
+                                        savedDispute.getId(),
+                                        txId,
+                                        openedByUserId,
+                                        reason,
+                                        savedDispute.getOpenedAt()
+                                );
+
+                                // Gửi event đến Exchange
+                                rabbitTemplate.convertAndSend(
+                                        RabbitMQConfig.EXCHANGE_NAME,
+                                        RabbitMQConfig.ROUTING_KEY,
+                                        event
+                                );
+                                log.info("Dispute event sent to RabbitMQ for ID: {}", savedDispute.getId());
+
+                        } catch (Exception e) {
+                                // QUAN TRỌNG: Chỉ log lỗi, không ném exception cho user...
+                                log.error("CRITICAL: Error sending dispute event to RabbitMQ for disputeId {}: {}", 
+                                        savedDispute.getId(), e.getMessage());
+                        }
+
+                        // 3. TRẢ VỀ CHO USER NGAY LẬP TỨC
+                        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                                "message", "Dispute opened successfully",
+                                "disputeId", savedDispute.getId(),
+                                "transactionId", txId,
+                                "status", savedDispute.getStatus().name()
+                        ));
                 })
                 .orElseGet(() -> {
                     log.warn("Transaction not found with ID {}", txId);

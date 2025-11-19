@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { toast } from "sonner";
 
 type PaymentResult = {
   success: boolean;
@@ -15,6 +17,7 @@ type PaymentResult = {
 const VnpayReturn = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuth();
   const [result, setResult] = useState<PaymentResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,7 @@ const VnpayReturn = () => {
         message: "Invalid payment response"
       });
       setLoading(false);
+      toast.error("Phản hồi thanh toán không hợp lệ");
       return;
     }
 
@@ -98,7 +102,7 @@ const VnpayReturn = () => {
     // Check response code
     const success = vnpResponseCode === "00";
     const message = success
-      ? "Thanh toán thành công! Số tiền sẽ được cập nhật vào ví của bạn."
+      ? "Thanh toán thành công! Số tiền đã được cập nhật vào ví của bạn."
       : getErrorMessage(vnpResponseCode);
 
     setResult({
@@ -108,7 +112,31 @@ const VnpayReturn = () => {
       message
     });
     setLoading(false);
-  }, [searchParams]);
+
+    // Show toast notification
+    if (success) {
+      toast.success("🎉 Nạp tiền thành công!", {
+        description: `Số tiền ${amount} VND đã được cộng vào ví của bạn.`,
+        duration: 5000,
+      });
+      
+      // Invalidate wallet queries to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-transactions"] });
+      
+      // Auto-redirect to wallet after 3 seconds
+      const redirectTimer = setTimeout(() => {
+        navigate("/wallet", { replace: true });
+      }, 3000);
+      
+      return () => clearTimeout(redirectTimer);
+    } else {
+      toast.error("❌ Thanh toán thất bại", {
+        description: message,
+        duration: 7000,
+      });
+    }
+  }, [searchParams, navigate, queryClient]);
 
   const getErrorMessage = (code: string): string => {
     const errorMessages: Record<string, string> = {
@@ -127,13 +155,12 @@ const VnpayReturn = () => {
     return errorMessages[code] || `Thanh toán thất bại hoặc bị hủy (Mã lỗi: ${code})`;
   };
 
-  const handleBackToDashboard = () => {
-    // Redirect về dashboard thay vì wallet
-    navigate("/dashboard");
+  const handleBackToWallet = () => {
+    navigate("/wallet", { replace: true });
   };
   
-  const handleBackToWallet = () => {
-    navigate("/wallet");
+  const handleBackToDashboard = () => {
+    navigate("/dashboard", { replace: true });
   };
 
   if (loading) {
@@ -196,38 +223,48 @@ const VnpayReturn = () => {
 
           {result?.success && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-              <p className="font-medium">💡 Lưu ý:</p>
+              <p className="font-medium">✅ Nạp tiền thành công!</p>
               <p className="mt-1">
-                Số dư trong ví của bạn đã được cập nhật. Bạn có thể quay lại trang ví để kiểm tra.
+                Số dư trong ví của bạn đã được cập nhật. Bạn sẽ được chuyển đến trang ví trong <strong>3 giây</strong>...
               </p>
             </div>
           )}
 
           <div className="flex gap-2 pt-4">
-            <Button
-              onClick={result?.success ? handleBackToDashboard : handleBackToWallet}
-              className="flex-1"
-              variant={result?.success ? "default" : "outline"}
-            >
-              {result?.success ? "Về trang chủ" : "Thử lại"}
-            </Button>
-            {result?.success && (
-              <Button
-                onClick={handleBackToWallet}
-                className="flex-1"
-                variant="outline"
-              >
-                Xem ví
-              </Button>
-            )}
-            {!result?.success && (
-              <Button
-                onClick={() => navigate("/dashboard")}
-                className="flex-1"
-                variant="outline"
-              >
-                Về trang chủ
-              </Button>
+            {result?.success ? (
+              <>
+                <Button
+                  onClick={handleBackToWallet}
+                  className="flex-1"
+                  variant="default"
+                >
+                  Xem ví ngay
+                </Button>
+                <Button
+                  onClick={handleBackToDashboard}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  Về trang chủ
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={handleBackToWallet}
+                  className="flex-1"
+                  variant="default"
+                >
+                  Thử lại
+                </Button>
+                <Button
+                  onClick={handleBackToDashboard}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  Về trang chủ
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

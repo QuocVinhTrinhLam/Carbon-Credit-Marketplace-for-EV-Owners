@@ -1,6 +1,11 @@
 import { AppRouter } from "./router";
+import ChatBox from "./components/ChatBox";
 
-const App = () => <AppRouter />;
-
-export default App;
-
+export default function App() {
+  return (
+    <>
+      <AppRouter />
+      <ChatBox />
+    </>
+  );
+}

@@ -47,6 +47,9 @@ public class SecurityConfig {
                                 "/api/payment/vnpay/return"  // VNPay IPN callback (public)
                         ).permitAll()
                         
+                         // Allow ChatBox
+                        .requestMatchers("/api/chat").authenticated()
+
                         // VNPay payment endpoints (authenticated)
                         .requestMatchers("/api/payment/vnpay/**").authenticated()
                         

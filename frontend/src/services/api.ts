@@ -1,15 +1,18 @@
 // src/services/api.ts
-import axios from 'axios';
+import axios from "axios";
 
 export const api = axios.create({
-  baseURL: '/api', // đi qua proxy Vite
+  baseURL: "/api", // FE -> Vite proxy -> BE
 });
 
-// Gắn token nếu sau này có login
+// Gắn token tự động (nếu có login)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
+
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers = config.headers || {}; // tránh lỗi undefined
+    config.headers["Authorization"] = `Bearer ${token}`;
   }
+
   return config;
 });

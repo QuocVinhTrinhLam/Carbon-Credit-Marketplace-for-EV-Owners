@@ -37,3 +37,9 @@ logging:
 jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
   expiration: 86400000  # 24 hours in milliseconds
+#Open Router
+openrouter:
+  api:
+    key: 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
+    endpoint: "https://openrouter.ai/api/v1/chat/completions"
+    model: "gpt-4o-mini"

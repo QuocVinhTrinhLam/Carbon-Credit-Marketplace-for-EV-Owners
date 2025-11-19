@@ -40,4 +40,12 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     long countByStatus(ListingStatus status);
     
     List<Listing> findTop10ByOrderByCreatedAtDesc();
+    @Query("SELECT AVG(l.price) FROM Listing l")
+    Double getAveragePrice();
+    
+    @Query("SELECT MIN(l.price) FROM Listing l")
+    Double getMinPrice();
+
+    @Query("SELECT MAX(l.price) FROM Listing l")
+    Double getMaxPrice();
 }

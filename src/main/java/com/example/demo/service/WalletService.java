@@ -1,10 +1,13 @@
 package com.example.demo.service;
 
-import com.example.demo.entity.CarbonWallet;
+import com.example.demo.dto.WalletBalanceResponse;
 import com.example.demo.entity.User;
-import com.example.demo.repository.CarbonWalletRepository;
+import com.example.demo.entity.Wallet;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.WalletRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,94 +15,82 @@ import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WalletService {
 
     private final UserRepository userRepository;
-    private final CarbonWalletRepository carbonWalletRepository;
+    private final WalletRepository walletRepository;
 
-    /**
-     * Helper: lấy ví carbon của user, nếu không có thì báo lỗi rõ ràng.
-     */
-    private CarbonWallet getCarbonWalletOrThrow(Long userId) {
-        return carbonWalletRepository.findByOwner_Id(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy carbon wallet cho user ID: " + userId));
+    @Transactional
+    public WalletBalanceResponse getWalletDetails(Long userId) {
+        Wallet wallet = loadOrCreateWallet(userId);
+        return mapToResponse(wallet);
     }
 
-    /**
-     * Trả về số dư carbon credit hiện tại của user.
-     * Dùng trong TransactionService.createTransaction() để kiểm tra đủ tiền.
-     */
-    @Transactional(readOnly = true)
+    @Transactional
     public BigDecimal getBalance(Long userId) {
-        CarbonWallet wallet = getCarbonWalletOrThrow(userId);
-        return wallet.getBalance();
+        return loadOrCreateWallet(userId).getBalance();
     }
 
-    /**
-     * Cộng tiền/tín chỉ carbon vào ví user.
-     * Dùng khi seller nhận tiền sau khi bán.
-     */
     @Transactional
     public void credit(Long userId, BigDecimal amount, String description) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Số tiền credit phải > 0");
+            throw new IllegalArgumentException("Amount must be greater than zero");
         }
 
-        // đảm bảo user tồn tại (để message lỗi đẹp hơn)
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy người dùng ID: " + userId));
-
-        CarbonWallet wallet = getCarbonWalletOrThrow(user.getId());
-
+        Wallet wallet = loadOrCreateWallet(userId);
         wallet.setBalance(wallet.getBalance().add(amount));
-        carbonWalletRepository.save(wallet);
+        walletRepository.save(wallet);
 
-        // TODO: nếu bạn muốn lưu lịch sử giao dịch sau này
-        // bạn có thể tạo CarbonWalletTransaction entity riêng
-        // và lưu (userId, amount, type=CREDIT, description)
+        log.info("Wallet credited: user={}, amount={}, description={}", userId, amount, description);
     }
 
-    /**
-     * Trừ tiền/tín chỉ carbon từ ví user.
-     * Dùng khi buyer thanh toán.
-     */
     @Transactional
     public void debit(Long userId, BigDecimal amount, String description) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Số tiền debit phải > 0");
+            throw new IllegalArgumentException("Amount must be greater than zero");
         }
 
-        // đảm bảo user tồn tại (để message lỗi đẹp hơn)
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy người dùng ID: " + userId));
-
-        CarbonWallet wallet = getCarbonWalletOrThrow(user.getId());
-
+        Wallet wallet = loadOrCreateWallet(userId);
         if (wallet.getBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Số dư không đủ để thực hiện giao dịch!");
+            throw new IllegalStateException("Insufficient balance to complete the transaction");
         }
 
         wallet.setBalance(wallet.getBalance().subtract(amount));
-        carbonWalletRepository.save(wallet);
+        walletRepository.save(wallet);
 
-        // TODO: ghi log giao dịch nếu cần (giống credit)
+        log.info("Wallet debited: user={}, amount={}, description={}", userId, amount, description);
     }
 
-    /**
-     * Optional tiện ích: chuyển tín chỉ từ A → B.
-     * Có thể dùng cho P2P/gifting nếu sau này cần.
-     */
     @Transactional
     public void transferCredits(Long fromUserId, Long toUserId, BigDecimal amount) {
-        // Trừ ví người gửi
-        debit(fromUserId, amount,
-                "Chuyển tín chỉ cho user ID " + toUserId);
+        debit(fromUserId, amount, "Transfer to user ID " + toUserId);
+        credit(toUserId, amount, "Transfer from user ID " + fromUserId);
+    }
 
-        // Cộng ví người nhận
-        credit(toUserId, amount,
-                "Nhận tín chỉ từ user ID " + fromUserId);
+    private Wallet loadOrCreateWallet(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+
+        return walletRepository.findByUser_Id(userId)
+                .orElseGet(() -> createWalletForUser(user));
+    }
+
+    private Wallet createWalletForUser(User user) {
+        Wallet wallet = new Wallet();
+        wallet.setUser(user);
+        wallet.setBalance(BigDecimal.ZERO);
+        Wallet saved = walletRepository.save(wallet);
+        user.setWallet(saved);
+        log.info("Wallet auto-created for user {}", user.getId());
+        return saved;
+    }
+
+    private WalletBalanceResponse mapToResponse(Wallet wallet) {
+        return new WalletBalanceResponse(
+                wallet.getUser().getId(),
+                wallet.getId(),
+                wallet.getBalance()
+        );
     }
 }

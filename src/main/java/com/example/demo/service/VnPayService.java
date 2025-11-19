@@ -21,13 +21,28 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class VnPayService {
 
     private final VnPayConfig vnPayConfig;
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository walletTransactionRepository;
+    private AdminNotificationService adminNotificationService;
+
+    public VnPayService(
+            VnPayConfig vnPayConfig,
+            WalletRepository walletRepository,
+            WalletTransactionRepository walletTransactionRepository) {
+        this.vnPayConfig = vnPayConfig;
+        this.walletRepository = walletRepository;
+        this.walletTransactionRepository = walletTransactionRepository;
+    }
+
+    // Optional: inject notification service to avoid circular dependency
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setAdminNotificationService(AdminNotificationService adminNotificationService) {
+        this.adminNotificationService = adminNotificationService;
+    }
 
     /**
      * Validate VNPay configuration
@@ -271,6 +286,20 @@ public class VnPayService {
             log.info("✅ Successfully processed VNPay topup for transaction {}: amount {} VND. " +
                     "Wallet balance: {} -> {}", 
                     vnpTxnRef, transaction.getAmount(), oldBalance, wallet.getBalance());
+            
+            // Notify admin about successful topup (if notification service is available)
+            if (adminNotificationService != null) {
+                try {
+                    adminNotificationService.notifyVnpayTopup(
+                        wallet.getUser(), 
+                        transaction.getAmount(), 
+                        vnpTxnRef
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to create admin notification for VNPay topup: {}", e.getMessage());
+                    // Don't fail the transaction if notification fails
+                }
+            }
         } else {
             // Thanh toán thất bại
             String errorCode = vnpResponseCode != null ? vnpResponseCode : vnpTransactionStatus;

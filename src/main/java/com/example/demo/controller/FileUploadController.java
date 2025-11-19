@@ -74,7 +74,7 @@ public class FileUploadController {
             return ResponseEntity.ok("File uploaded and metadata saved: " + destination.getAbsolutePath());
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("❌ File upload failed: " + e.getMessage());
+                    .body("File upload failed: " + e.getMessage());
         }
     }
 }

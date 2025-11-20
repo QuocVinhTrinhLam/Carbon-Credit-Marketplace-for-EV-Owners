@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { ChevronLeft, Leaf, ShieldCheck, Trees } from "lucide-react";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -52,12 +53,20 @@ const ListingDetailPage = () => {
     mutationFn: (payload: { listingId: string; buyerId: string; quantity?: number }) =>
       transactionService.buy(payload),
     onSuccess: () => {
-      toast.success("Purchase request submitted successfully");
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast.success("Purchase completed successfully");
+      queryClient.invalidateQueries({ queryKey: ["transactions", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["wallet", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-transactions", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["listing", id] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
       navigate("/transactions");
     },
-    onError: () => {
-      toast.error("Unable to complete purchase. Please try again.");
+    onError: (error) => {
+      const message =
+        (error as AxiosError<{ message?: string }>)?.response?.data?.message ??
+        "Unable to complete purchase. Please try again.";
+
+      toast.error(message);
     }
   });
 
@@ -216,7 +225,7 @@ const ListingDetailPage = () => {
                   </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={buyMutation.isPending}>
-                  {buyMutation.isPending ? "Submitting..." : "Submit purchase request"}
+                  {buyMutation.isPending ? "Processing purchase..." : "Buy now"}
                 </Button>
               </form>
             </Form>

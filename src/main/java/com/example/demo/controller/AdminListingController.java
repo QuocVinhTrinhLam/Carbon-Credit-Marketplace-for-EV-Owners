@@ -73,12 +73,13 @@ public class AdminListingController {
         log.info("Admin - Approve listing ID: {}", id);
         return listingRepository.findById(id)
                 .<ResponseEntity<?>>map(l -> {
-                    l.setStatus(Listing.ListingStatus.APPROVED);
+                // When approved by CVA/admin, mark listing as OPEN so it appears on marketplace
+                l.setStatus(Listing.ListingStatus.OPEN);
                     listingRepository.save(l);
                     return ResponseEntity.ok(Map.of(
                             "message", "Listing approved successfully",
                             "id", id,
-                            "status", "APPROVED"
+                    "status", "OPEN"
                     ));
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -124,6 +125,37 @@ public class AdminListingController {
                 "sold", sold,
                 "cancelled", cancelled
         ));
+    }
+
+    /**
+     * Get pending listings for CVA/admin review
+     */
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingListings() {
+        log.info("Admin - Fetch pending listings");
+        List<Listing> listings = listingRepository.findByStatusOrderByCreatedAtDesc(Listing.ListingStatus.PENDING);
+
+        if (listings.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                    .body(Collections.singletonMap("message", "No pending listings"));
+        }
+
+        List<Map<String, Object>> data = listings.stream().map(l -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", l.getId());
+            map.put("title", l.getTitle());
+            map.put("price", l.getPrice());
+            map.put("carbonAmount", l.getCarbonAmount());
+            map.put("status", l.getStatus().toString());
+            map.put("sellerId", l.getSeller() != null ? l.getSeller().getId() : null);
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("total", data.size());
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
     }
 
     /**

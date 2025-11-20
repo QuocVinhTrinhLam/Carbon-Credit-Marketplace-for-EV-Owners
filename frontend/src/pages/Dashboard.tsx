@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { StatCard } from "../components/common/StatCard";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { GradientAreaChart } from "../components/ui/chart";
@@ -15,6 +16,9 @@ import { walletService } from "../services/wallet";
 
 const DashboardPage = () => {
   const { user } = useAuth();
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const walletQuery = useFetch(
     ["wallet", user?.id],
@@ -41,6 +45,49 @@ const DashboardPage = () => {
   );
 
   const listingsQuery = useFetch(["listings"], () => listingService.getListings());
+  const myListingsQuery = useFetch(
+    ["my-listings", user?.id],
+    () => listingService.getListingsBySeller(Number(user?.id)),
+    { enabled: Boolean(user?.id) }
+  );
+
+  // Listing creation form state
+  const [title, setTitle] = useState("");
+  const [descriptionInput, setDescriptionInput] = useState("");
+  const [carbonAmount, setCarbonAmount] = useState<number | "">("");
+  // price per credit (VND) - default value; total price auto-updates by quantity
+  const [pricePerCredit, setPricePerCredit] = useState<number>(100000);
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+
+  const handleCreateListing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError(null);
+    setCreating(true);
+      try {
+      const total = Number(carbonAmount || 0) * Number(pricePerCredit || 0);
+      const payload = {
+        title,
+        description: descriptionInput,
+        carbonAmount: Number(carbonAmount),
+        price: Number(total),
+        sellerId: Number(user?.id)
+      };
+      await listingService.createListing(payload as any);
+      // refresh user's listing requests
+      if (myListingsQuery && myListingsQuery.refetch) await myListingsQuery.refetch();
+      setCreateSuccess("Listing request submitted — pending CVA review");
+      setShowCreate(false);
+      // Reset form
+      setTitle("");
+      setDescriptionInput("");
+      setCarbonAmount("");
+      setPricePerCredit(100000);
+    } catch (err) {
+      setCreateError("Failed to submit listing request. Please try again.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const chartData = useMemo(() => {
     if (!transactionsQuery.data) return [];
@@ -111,12 +158,82 @@ const DashboardPage = () => {
             <Button asChild variant="outline">
               <Link to="/credits">Manage certificates</Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link to="/listings">Create new listing</Link>
+            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create new listing</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateListing} className="space-y-3 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium">Listing title</label>
+                    <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Description</label>
+                    <textarea value={descriptionInput} onChange={(e) => setDescriptionInput(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Quantity (tCO₂e)</label>
+                    <input type="number" value={carbonAmount as any} onChange={(e) => setCarbonAmount(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Price per tCO₂e (VND)</label>
+                    <input type="number" value={pricePerCredit} onChange={(e) => setPricePerCredit(Number(e.target.value || 0))} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Total price (VND)</label>
+                    <input type="text" value={((Number(carbonAmount || 0) * Number(pricePerCredit || 0))).toLocaleString('vi-VN')} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-slate-50" />
+                  </div>
+                  {createError && <p className="text-sm text-red-600">{createError}</p>}
+                              <DialogFooter>
+                                <div className="flex gap-2">
+                                  <Button type="submit" disabled={creating}>{creating ? "Submitting..." : "Submit listing request"}</Button>
+                                  <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
+                                </div>
+                              </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={() => setShowCreate(true)}>
+              Create new listing
             </Button>
           </CardContent>
         </Card>
       </section>
+
+
+      {createSuccess && (
+        <div className="mb-4 rounded-md bg-green-50 p-4 text-green-800">
+          {createSuccess}
+        </div>
+      )}
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>My listing requests</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {myListingsQuery.isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : myListingsQuery.data && myListingsQuery.data.length > 0 ? (
+            myListingsQuery.data.map((l) => (
+              <div key={l.id} className="flex items-center justify-between border-b py-2">
+                <div>
+                  <p className="font-medium">{l.name}</p>
+                  <p className="text-xs text-muted-foreground">{l.summary}</p>
+                </div>
+                <div className="text-sm">
+                  <span className="mr-3">{l.totalCredits} tCO₂e</span>
+                  <span className="font-medium">{l.pricePerCredit} VND</span>
+                  <div className="text-xs text-muted-foreground">Status: {l.status}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <EmptyState message="You don't have any listing requests yet." />
+          )}
+        </CardContent>
+      </Card>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <Card className="h-full">

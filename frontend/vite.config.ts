@@ -3,6 +3,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const API_PROXY = "http://localhost:4000";
+
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
   resolve: {
@@ -12,11 +14,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: API_PROXY,
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, "") // map /api/listings -> /listings
       }
     },
     watch: {

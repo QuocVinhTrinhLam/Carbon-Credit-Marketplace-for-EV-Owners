@@ -37,7 +37,8 @@ public class ListingService {
         listing.setCarbonAmount(request.getCarbonAmount());
         listing.setPrice(request.getPrice());
         listing.setSeller(seller);
-        listing.setStatus(Listing.ListingStatus.OPEN);
+        // New listings are created as PENDING for CVA/admin review
+        listing.setStatus(Listing.ListingStatus.PENDING);
         
         Listing savedListing = listingRepository.save(listing);
         log.info("Listing created with ID: {}", savedListing.getId());

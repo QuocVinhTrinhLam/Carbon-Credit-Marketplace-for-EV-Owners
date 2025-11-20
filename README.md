@@ -5,7 +5,7 @@ Full-stack monorepo containing a Spring Boot backend and a React + TypeScript fr
 ## Tech Stack
 
 ### Backend
-- **Java 21**
+- **Java 21**  
 - **Spring Boot 3.2.0**
 - **Maven**
 - **MySQL 8.0**
@@ -88,7 +88,7 @@ CCMfEO/
 
 First, start MySQL in Docker:
 ```bash
-docker compose up -d db
+docker compose up -d --build
 ```
 
 Then run the Spring Boot application:

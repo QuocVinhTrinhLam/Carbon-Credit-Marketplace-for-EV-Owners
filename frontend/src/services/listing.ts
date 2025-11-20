@@ -69,5 +69,15 @@ export const listingService = {
     const { data } = await api.get<ListingResponse>(`/listings/${id}`);
     return mapListing(data);
   }
+  ,
+  async createListing(payload: { title: string; description?: string; carbonAmount: number; price: number; sellerId: number }) {
+    const { data } = await api.post<ListingResponse>(`/listings`, payload);
+    return mapListing(data);
+  }
+  ,
+  async getListingsBySeller(sellerId: number) {
+    const { data } = await api.get<ListingResponse[]>(`/listings/seller/${sellerId}`);
+    return data.map(mapListing);
+  }
 };
 

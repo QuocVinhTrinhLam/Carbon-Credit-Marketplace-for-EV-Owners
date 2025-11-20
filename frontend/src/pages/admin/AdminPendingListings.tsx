@@ -10,50 +10,33 @@ interface Listing {
   sellerId: number;
 }
 
-export default function AdminListings() {
+export default function AdminPendingListings() {
   const [listings, setListings] = useState<Listing[]>([]);
-  const [stats, setStats] = useState({ total: 0, open: 0, sold: 0, cancelled: 0 });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchListings();
-    fetchStats();
+    fetchPending();
   }, []);
 
-  const fetchListings = async () => {
+  const fetchPending = async () => {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("/api/admin/listings", {
+      const response = await fetch("/api/admin/listings/pending", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
         setListings(data.data || []);
+      } else {
+        console.error("Failed to fetch pending listings", response.status);
       }
     } catch (error) {
-      console.error("Failed to fetch listings:", error);
+      console.error("Failed to fetch pending listings:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchStats = async () => {
-    const token = localStorage.getItem("token");
-
-    try {
-      const response = await fetch("/api/admin/listings/stats", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
     }
   };
 
@@ -66,8 +49,7 @@ export default function AdminListings() {
       });
 
       if (response.ok) {
-        alert("Listing approved!");
-        fetchListings();
+        fetchPending();
       }
     } catch (error) {
       console.error("Failed to approve listing:", error);
@@ -86,47 +68,11 @@ export default function AdminListings() {
       });
 
       if (response.ok) {
-        alert("Listing rejected!");
-        fetchListings();
+        fetchPending();
       }
     } catch (error) {
       console.error("Failed to reject listing:", error);
     }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Delete this listing permanently?")) return;
-
-    const token = localStorage.getItem("token");
-    try {
-      const response = await fetch(`/api/admin/listings/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        alert("Listing deleted!");
-        fetchListings();
-      }
-    } catch (error) {
-      console.error("Failed to delete listing:", error);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      OPEN: "bg-green-100 text-green-800",
-      SOLD: "bg-blue-100 text-blue-800",
-      CANCELLED: "bg-red-100 text-red-800",
-      APPROVED: "bg-purple-100 text-purple-800",
-      REJECTED: "bg-gray-100 text-gray-800",
-    };
-
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${colors[status] || "bg-gray-100"}`}>
-        {status}
-      </span>
-    );
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -137,18 +83,12 @@ export default function AdminListings() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <h1 className="text-2xl font-bold">📝 Listing Management</h1>
+              <h1 className="text-2xl font-bold">🛠 Pending Listings Review</h1>
               <button
-                onClick={() => navigate("/admin/dashboard")}
+                onClick={() => navigate("/admin/listings")}
                 className="text-sm bg-white/20 px-4 py-2 rounded hover:bg-white/30"
               >
-                ← Dashboard
-              </button>
-              <button
-                onClick={() => navigate("/admin/listings/pending")}
-                className="text-sm bg-white/20 px-4 py-2 rounded hover:bg-white/30"
-              >
-                🔎 Pending
+                ← All Listings
               </button>
             </div>
             <button
@@ -165,29 +105,8 @@ export default function AdminListings() {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow">
-            <p className="text-gray-600 text-sm">Total</p>
-            <p className="text-3xl font-bold">{stats.total}</p>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow">
-            <p className="text-gray-600 text-sm">Open</p>
-            <p className="text-3xl font-bold text-green-600">{stats.open}</p>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow">
-            <p className="text-gray-600 text-sm">Sold</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.sold}</p>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow">
-            <p className="text-gray-600 text-sm">Cancelled</p>
-            <p className="text-3xl font-bold text-red-600">{stats.cancelled}</p>
-          </div>
-        </div>
-
-        {/* Listings Table */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold mb-6">All Listings ({listings.length})</h2>
+          <h2 className="text-2xl font-bold mb-6">Pending Listings ({listings.length})</h2>
 
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -198,7 +117,6 @@ export default function AdminListings() {
                   <th className="px-4 py-3 text-left">Carbon Amount</th>
                   <th className="px-4 py-3 text-left">Price</th>
                   <th className="px-4 py-3 text-left">Seller ID</th>
-                  <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Actions</th>
                 </tr>
               </thead>
@@ -210,7 +128,6 @@ export default function AdminListings() {
                     <td className="px-4 py-3">{listing.carbonAmount} kg</td>
                     <td className="px-4 py-3 font-semibold">{listing.price.toLocaleString()} VND</td>
                     <td className="px-4 py-3">{listing.sellerId}</td>
-                    <td className="px-4 py-3">{getStatusBadge(listing.status)}</td>
                     <td className="px-4 py-3">
                       <div className="flex space-x-2">
                         <button
@@ -225,12 +142,6 @@ export default function AdminListings() {
                         >
                           Reject
                         </button>
-                        <button
-                          onClick={() => handleDelete(listing.id)}
-                          className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
-                        >
-                          Delete
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -243,4 +154,3 @@ export default function AdminListings() {
     </div>
   );
 }
-

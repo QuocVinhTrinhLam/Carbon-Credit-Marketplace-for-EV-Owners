@@ -14,6 +14,8 @@ import java.util.List;
 
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, Long> {
+
+List<Listing> findBySellerIdAndStatus(Long sellerId, Listing.ListingStatus status);
     
     List<Listing> findBySellerIdOrderByCreatedAtDesc(Long sellerId);
     

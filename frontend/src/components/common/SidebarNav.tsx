@@ -5,10 +5,15 @@ import {
   LayoutDashboard,
   ListChecks,
   User,
-  Wallet2
+  Wallet2,
+  
 } from "lucide-react";
 import { Sidebar, SidebarItem } from "../ui/sidebar";
 
+/**
+ * Sidebar items used for desktop sidebar
+ * - added UploadCloud item for uploading driving data
+ */
 const sidebarItems: SidebarItem[] = [
   {
     to: "/dashboard",
@@ -40,10 +45,10 @@ const sidebarItems: SidebarItem[] = [
     to: "/profile",
     label: "Profile",
     icon: <User className="h-4 w-4" />
-  }
+  },
+  // Upload driving data item removed (deprecated)
 ];
 
 export function SidebarNav() {
   return <Sidebar items={sidebarItems} />;
 }
-

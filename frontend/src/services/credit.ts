@@ -32,5 +32,15 @@ export const creditService = {
       return [];
     }
   }
+  ,
+  async createCredit(payload: Partial<CreditCertificate>) {
+    try {
+      const { data } = await api.post<CreditCertificate>(`/carbon-credits`, payload);
+      return data;
+    } catch (error) {
+      console.warn("create credit endpoint not available", error);
+      throw error;
+    }
+  }
 };
 

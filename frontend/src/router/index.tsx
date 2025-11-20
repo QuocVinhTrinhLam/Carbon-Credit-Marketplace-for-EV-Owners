@@ -19,6 +19,7 @@ const AdminUsersPage = lazy(() => import("../pages/admin/AdminUsers"));
 const AdminTransactionsPage = lazy(() => import("../pages/admin/AdminTransactions"));
 const AdminWalletsPage = lazy(() => import("../pages/admin/AdminWallets"));
 const AdminListingsPage = lazy(() => import("../pages/admin/AdminListings"));
+const AdminPendingListingsPage = lazy(() => import("../pages/admin/AdminPendingListings"));
 const AdminReportsPage = lazy(() => import("../pages/admin/AdminReports"));
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
@@ -99,6 +100,11 @@ export const AppRouter = () => (
       <Route path="/admin/listings" element={
         <AdminRoute>
           <AdminListingsPage />
+        </AdminRoute>
+      } />
+      <Route path="/admin/listings/pending" element={
+        <AdminRoute>
+          <AdminPendingListingsPage />
         </AdminRoute>
       } />
       <Route path="/admin/reports" element={

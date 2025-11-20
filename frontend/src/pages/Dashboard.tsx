@@ -108,7 +108,7 @@ const DashboardPage = () => {
         </p>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" asChild>
-            <Link to="/listings">Browse marketplace</Link>
+            <Link to="/marketplace">Browse marketplace</Link>
           </Button>
           <Button variant="outline" className="bg-white/10 text-white hover:bg-white/20 hover:text-white" asChild>
             <Link to="/wallet">Manage wallet</Link>

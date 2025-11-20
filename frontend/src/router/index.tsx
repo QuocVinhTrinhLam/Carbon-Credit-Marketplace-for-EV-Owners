@@ -8,7 +8,7 @@ const LoginPage = lazy(() => import("../pages/Login"));
 const RegisterPage = lazy(() => import("../pages/Register"));
 const DashboardPage = lazy(() => import("../pages/Dashboard"));
 const WalletPage = lazy(() => import("../pages/Wallet"));
-const ListingsPage = lazy(() => import("../pages/Listings"));
+const MarketplacePage = lazy(() => import("../pages/Marketplace"));
 const ListingDetailPage = lazy(() => import("../pages/ListingDetail"));
 const CreditsPage = lazy(() => import("../pages/Credits"));
 const TransactionsPage = lazy(() => import("../pages/Transactions"));
@@ -122,8 +122,8 @@ export const AppRouter = () => (
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/listings" element={<ListingsPage />} />
-        <Route path="/listings/:id" element={<ListingDetailPage />} />
+        <Route path="/marketplace" element={<MarketplacePage />} />
+        <Route path="/marketplace/:id" element={<ListingDetailPage />} />
         <Route path="/credits" element={<CreditsPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/profile" element={<ProfilePage />} />

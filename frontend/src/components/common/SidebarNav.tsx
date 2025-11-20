@@ -6,7 +6,7 @@ import {
   ListChecks,
   User,
   Wallet2,
-  
+  UploadCloud
 } from "lucide-react";
 import { Sidebar, SidebarItem } from "../ui/sidebar";
 
@@ -27,8 +27,8 @@ const sidebarItems: SidebarItem[] = [
     icon: <Wallet2 className="h-4 w-4" />
   },
   {
-    to: "/listings",
-    label: "Listings",
+    to: "/marketplace",
+    label: "Marketplace",
     icon: <Briefcase className="h-4 w-4" />
   },
   {
@@ -46,9 +46,9 @@ const sidebarItems: SidebarItem[] = [
     label: "Profile",
     icon: <User className="h-4 w-4" />
   },
-  // Upload driving data item removed (deprecated)
-];
 
+  // Upload driving data removed
+]
 export function SidebarNav() {
   return <Sidebar items={sidebarItems} />;
 }

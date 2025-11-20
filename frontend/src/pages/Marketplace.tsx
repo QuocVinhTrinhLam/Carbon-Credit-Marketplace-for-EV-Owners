@@ -10,7 +10,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { useFetch } from "../hooks/useFetch";
 import { listingService } from "../services/listing";
 
-const ListingsPage = () => {
+const MarketplacePage = () => {
   const listingsQuery = useFetch(["listings"], () => listingService.getListings());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -144,7 +144,7 @@ const ListingsPage = () => {
                     </div>
                   </div>
                   <Button variant="outline" asChild>
-                    <Link to={`/listings/${listing.id}`}>View details</Link>
+                    <Link to={`/marketplace/${listing.id}`}>View details</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -160,5 +160,5 @@ const ListingsPage = () => {
   );
 };
 
-export default ListingsPage;
+export default MarketplacePage;
 

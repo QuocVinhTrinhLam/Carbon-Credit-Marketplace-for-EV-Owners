@@ -4,6 +4,7 @@ import com.example.demo.entity.CarbonCredit;
 import com.example.demo.entity.CreditRequest;
 import com.example.demo.repository.CarbonCreditRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +21,16 @@ public class CarbonCreditService {
         credit.setOwnerId(request.getOwnerId());
         credit.setAmount(request.getCarbonAmount());
         credit.setSource("Request#" + request.getId());
+        return carbonCreditRepository.save(credit);
+    }
+
+    // Issue credit directly (used by upload flow)
+    @Transactional
+    public CarbonCredit issueCredit(Long ownerId, Double amount, String source) {
+        CarbonCredit credit = new CarbonCredit();
+        credit.setOwnerId(ownerId);
+        credit.setAmount(amount);
+        credit.setSource(source);
         return carbonCreditRepository.save(credit);
     }
 

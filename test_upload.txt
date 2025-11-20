@@ -1,0 +1,5 @@
+Total emissions: 1234 kg CO2
+Electricity consumption: 2500 kWh
+Travel distance by car: 1500 km
+Fuel consumed: 200 liters
+Additional offset reported: 0.5 t CO2

@@ -47,6 +47,12 @@ const sidebarItems: SidebarItem[] = [
     icon: <User className="h-4 w-4" />
   },
 
+  {
+    to: "/upload",
+    label: "Upload",
+    icon: <UploadCloud className="h-4 w-4" />
+  },
+
   // Upload driving data removed
 ]
 export function SidebarNav() {

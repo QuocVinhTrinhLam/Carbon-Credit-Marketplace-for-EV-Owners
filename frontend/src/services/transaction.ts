@@ -59,6 +59,17 @@ export const transactionService = {
       listingId: Number(payload.listingId),
       buyerId: Number(payload.buyerId)
     });
-    return mapTransaction(data, payload.buyerId);
+
+    const transactionId = data?.id;
+
+    if (!transactionId) {
+      throw new Error("Transaction could not be created");
+    }
+
+    const { data: confirmedTransaction } = await api.post<TransactionResponse>(
+      `/transactions/${transactionId}/confirm`
+    );
+
+    return mapTransaction(confirmedTransaction ?? data, payload.buyerId);
   }
 };

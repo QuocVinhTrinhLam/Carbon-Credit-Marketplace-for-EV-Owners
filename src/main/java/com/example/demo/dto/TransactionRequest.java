@@ -15,4 +15,7 @@ public class TransactionRequest {
     
     @NotNull(message = "Buyer ID is required")
     private Long buyerId;
+    
+    // Thêm field quantity, mặc định là 1
+    private Integer quantity = 1;
 }

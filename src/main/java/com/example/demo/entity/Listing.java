@@ -54,6 +54,6 @@ public class Listing {
     private User seller;
 
     public enum ListingStatus {
-        PENDING, OPEN, RESERVED, SOLD, CANCELLED, APPROVED, REJECTED
+        PENDING, OPEN, RESERVED, SOLD, CANCELLED, APPROVED, REJECTED, ACTIVE
     }
 }

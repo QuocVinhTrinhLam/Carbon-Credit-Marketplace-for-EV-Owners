@@ -18,7 +18,7 @@ public class AdminListingController {
 
     private final ListingRepository listingRepository;
 
-    // ✅ Lấy toàn bộ listing cho admin
+    // Lấy toàn bộ listing cho admin
     @GetMapping
     public ResponseEntity<?> getAllListings() {
         List<Listing> listings = listingRepository.findAll();
@@ -28,7 +28,7 @@ public class AdminListingController {
                     .body(Collections.singletonMap("message", "No listings found"));
         }
 
-        // ✅ Dùng HashMap thay cho Map.of() để tương thích mọi version Java
+        // Dùng HashMap thay cho Map.of() để tương thích mọi version Java
         List<Map<String, Object>> data = listings.stream().map(l -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", l.getId());
@@ -47,7 +47,7 @@ public class AdminListingController {
         return ResponseEntity.ok(response);
     }
 
-    // ✅ Disable (vô hiệu hóa) một listing cụ thể
+    // Disable (vô hiệu hóa) một listing cụ thể
     @PutMapping("/{id}/disable")
     public ResponseEntity<?> disableListing(@PathVariable Long id) {
         return listingRepository.findById(id)
@@ -73,7 +73,7 @@ public class AdminListingController {
         log.info("Admin - Approve listing ID: {}", id);
         return listingRepository.findById(id)
                 .<ResponseEntity<?>>map(l -> {
-                // When approved by CVA/admin, mark listing as OPEN so it appears on marketplace
+                // When approved by CVA/admin, mark listing as ACTIVE so it appears on marketplace
                 l.setStatus(Listing.ListingStatus.OPEN);
                     listingRepository.save(l);
                     return ResponseEntity.ok(Map.of(

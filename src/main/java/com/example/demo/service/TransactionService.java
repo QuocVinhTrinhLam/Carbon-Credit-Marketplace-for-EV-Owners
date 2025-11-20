@@ -26,6 +26,7 @@ public class TransactionService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final WalletService walletService;
+    private final CertificateService CertificateService; //Thêm CertificateService
 
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request) {
@@ -106,6 +107,13 @@ public class TransactionService {
                 transaction.getAmount(),
                 "Sale of listing: " + transaction.getListing().getTitle()
         );
+        // ISSUE CERTIFICATE cho buyer
+        Double credits = transaction.getListing().getCarbonAmount().doubleValue();
+        
+        CertificateService.createCertificate(
+            transaction.getBuyer().getId(),
+            credits
+         );
 
         // 4. Mark transaction as COMPLETED
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);

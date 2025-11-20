@@ -1,62 +1,65 @@
 package com.example.demo.service;
 
+import com.example.demo.entity.CarbonCertificate;
+import com.example.demo.entity.CarbonCredit;
 import com.example.demo.entity.CreditRequest;
+import com.example.demo.repository.CarbonCertificateRepository;
+import com.example.demo.repository.CarbonCreditRepository;
 import com.example.demo.repository.CreditRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
 public class CreditService {
 
     private final CreditRequestRepository creditRequestRepository;
-    private final CarbonCreditService carbonCreditService;
-    private final WalletService walletService; // connect sang ví
+    private final CarbonCreditRepository carbonCreditRepository;
+    private final CarbonCertificateRepository certificateRepository;
 
-    // EV Owner gửi yêu cầu
-    public CreditRequest submitRequest(CreditRequest request) {
-        request.setStatus("PENDING");
-        return creditRequestRepository.save(request);
-    }
+    public CreditRequest approveRequest(Long id) {
 
-    // CVA duyệt yêu cầu
-    @Transactional
-    public CreditRequest approveRequest(Long requestId) {
-        CreditRequest request = creditRequestRepository.findById(requestId)
+        CreditRequest req = creditRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        if (!"PENDING".equals(request.getStatus())) {
-            throw new IllegalStateException("Request already processed");
-        }
+        req.setStatus("APPROVED");
+        creditRequestRepository.save(req);
 
-        request.setStatus("APPROVED");
-        creditRequestRepository.save(request);
+        //  Tạo certificate
+        CarbonCertificate cert = CarbonCertificate.builder()
+                .ownerId(req.getOwnerId())
+                .amount(req.getCarbonAmount())
+                .issuedDate(LocalDate.now())
+                .expiryDate(LocalDate.now().plusDays(90))
+                .status(CarbonCertificate.CertificateStatus.VALID)
+                .build();
 
-        // Tạo bản ghi CarbonCredit
-        var credit = carbonCreditService.issueCredit(request);
+        certificateRepository.save(cert);
 
-        // ⚙️ Convert Double -> BigDecimal để khớp với WalletService.credit()
-        BigDecimal amount = BigDecimal.valueOf(credit.getAmount());
+        //  Tạo carbon credit
+        CarbonCredit credit = new CarbonCredit();
+        credit.setOwnerId(req.getOwnerId());
+        credit.setAmount(req.getCarbonAmount());
+        credit.setSource("Certificate#" + cert.getId());
+        carbonCreditRepository.save(credit);
 
-        // Cộng tín chỉ vào Wallet
-        walletService.credit(
-                request.getOwnerId(),
-                amount,
-                "Issued from CreditRequest#" + request.getId()
-        );
-
-        return request;
+        return req;
     }
 
-    // CVA từ chối
-    public CreditRequest rejectRequest(Long requestId, String reason) {
-        CreditRequest request = creditRequestRepository.findById(requestId)
+    public CreditRequest rejectRequest(Long id, String reason) {
+        CreditRequest req = creditRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        request.setStatus("REJECTED: " + reason);
-        return creditRequestRepository.save(request);
+        req.setStatus("REJECTED");
+        req.setNotes(reason);
+
+        return creditRequestRepository.save(req);
+    }
+
+    public CreditRequest submitRequest(CreditRequest r) {
+        r.setStatus("PENDING");
+        return creditRequestRepository.save(r);
     }
 }

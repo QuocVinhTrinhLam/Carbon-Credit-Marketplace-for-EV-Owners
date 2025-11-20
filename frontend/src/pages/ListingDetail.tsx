@@ -113,6 +113,31 @@ const ListingDetailPage = () => {
   const listing = listingQuery.data;
   const estimatedCost = form.watch("quantity") * listing.pricePerCredit;
 
+  function parseListingDescription(summary: string | undefined) {
+    const result: {
+      categories?: string[];
+      buyerTypes?: string[];
+      benefits?: string;
+      province?: string;
+      raw?: string;
+    } = {};
+    if (!summary) return { raw: "" };
+    summary.split(";").forEach((part) => {
+      const [k, ...rest] = part.split(":");
+      if (!k) return;
+      const key = k.trim().toLowerCase();
+      const val = rest.join(":").trim();
+      if (!val) return;
+      if (key.startsWith("categories")) result.categories = val.split(",").map(s => s.trim());
+      else if (key.startsWith("buyer")) result.buyerTypes = val.split(",").map(s => s.trim());
+      else if (key.startsWith("benefits")) result.benefits = val;
+      else if (key.startsWith("province")) result.province = val;
+    });
+    result.raw = summary;
+    return result;
+  }
+  const parsedDesc = parseListingDescription(listing.summary);
+
   return (
     <div className="space-y-6">
       <Button variant="ghost" className="gap-2 text-sm" asChild>
@@ -163,9 +188,23 @@ const ListingDetailPage = () => {
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Project summary
               </h3>
-              <p className="mt-3 leading-relaxed text-slate-700">
-                {listing.summary}
-              </p>
+              <div className="mt-3 leading-relaxed text-slate-700 space-y-2">
+                {parsedDesc.categories && parsedDesc.categories.length > 0 && (
+                  <p><strong>Categories:</strong> {parsedDesc.categories.join(", ")}</p>
+                )}
+                {parsedDesc.buyerTypes && parsedDesc.buyerTypes.length > 0 && (
+                  <p><strong>Buyer types:</strong> {parsedDesc.buyerTypes.join(", ")}</p>
+                )}
+                {parsedDesc.province && (
+                  <p><strong>Province:</strong> {parsedDesc.province}</p>
+                )}
+                {parsedDesc.benefits && (
+                  <p><strong>Benefits:</strong> {parsedDesc.benefits}</p>
+                )}
+                {!parsedDesc.raw && (
+                  <p>{listing.summary}</p>
+                )}
+              </div>
             </div>
             <Card>
               <CardHeader className="pb-2">

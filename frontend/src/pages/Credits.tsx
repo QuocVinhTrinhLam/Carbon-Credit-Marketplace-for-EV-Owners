@@ -11,11 +11,13 @@ import { creditService } from "../services/credit";
 
 const CreditsPage = () => {
   const { user } = useAuth();
+
   const portfolioQuery = useFetch(
     ["portfolio", user?.id],
     () => creditService.getPortfolio(user!.id),
     { enabled: Boolean(user?.id) }
   );
+
   const certificatesQuery = useFetch(["certificates"], () =>
     creditService.getCertificates()
   );
@@ -24,19 +26,18 @@ const CreditsPage = () => {
     if (!portfolioQuery.data) {
       return { totalCredits: 0, valid: 0, expiringSoon: 0 };
     }
+
     const totalCredits = portfolioQuery.data.reduce(
       (acc, item) => acc + item.quantity,
       0
     );
+
     const valid = portfolioQuery.data.filter(
       (item) => item.status === "VALID"
     ).length;
-    const expiringSoon = portfolioQuery.data.filter((item) => {
-      const expires = new Date(item.expiresAt);
-      const difference =
-        expires.getTime() - Date.now();
-      return difference < 1000 * 60 * 60 * 24 * 90; // 90 days
-    }).length;
+
+    const expiringSoon = portfolioQuery.data.filter((item) => item.status === "EXPIRING_SOON").length;
+
     return { totalCredits, valid, expiringSoon };
   }, [portfolioQuery.data]);
 
@@ -67,7 +68,7 @@ const CreditsPage = () => {
         <SummaryCard
           title="Expiring soon"
           value={summary.expiringSoon.toString()}
-          subLabel="Within 90 days"
+          subLabel="Within 10 days"
           icon={<ShieldAlert className="h-6 w-6 text-orange-500" />}
           isLoading={portfolioQuery.isLoading}
         />
@@ -222,20 +223,25 @@ function SummaryCard({
   );
 }
 
-function StatusPill({ status }: { status: "VALID" | "EXPIRED" | "PENDING" }) {
+function StatusPill({ status }: { status: "VALID" | "EXPIRED" | "EXPIRING_SOON" }) {
   const variant =
-    status === "VALID" ? "success" : status === "EXPIRED" ? "destructive" : "secondary";
+    status === "VALID"
+      ? "success"
+      : status === "EXPIRED"
+      ? "destructive"
+      : "secondary";
+
   return (
     <span
       className={
         variant === "success"
           ? "rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700"
           : variant === "destructive"
-            ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600"
-            : "rounded-full bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700"
+          ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600"
+          : "rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700"
       }
     >
-      {status.toLowerCase()}
+      {status.toLowerCase().replace("_", " ")}
     </span>
   );
 }
@@ -259,4 +265,3 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export default CreditsPage;
-

@@ -42,6 +42,10 @@ public class Transaction {
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be positive")
     private BigDecimal amount;
+    
+    // Thêm quantity
+    @Column(nullable = false)
+    private Integer quantity = 1;
 
     // Trạng thái giao dịch
     @Enumerated(EnumType.STRING)

@@ -207,7 +207,7 @@ export default function AdminListings() {
                   <tr key={listing.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">{listing.id}</td>
                     <td className="px-4 py-3 font-medium">{listing.title}</td>
-                    <td className="px-4 py-3">{listing.carbonAmount} kg</td>
+                    <td className="px-4 py-3">{listing.carbonAmount}</td>
                     <td className="px-4 py-3 font-semibold">{listing.price.toLocaleString()} VND</td>
                     <td className="px-4 py-3">{listing.sellerId}</td>
                     <td className="px-4 py-3">{getStatusBadge(listing.status)}</td>

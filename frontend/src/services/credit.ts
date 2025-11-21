@@ -7,14 +7,14 @@ export type CreditCertificate = {
   certification: string;
   issuedDate: string;
   expiresAt: string;
-  status: "VALID" | "EXPIRED" | "PENDING";
+  status: "VALID" | "EXPIRED" | "EXPIRING_SOON";
 };
 
 export const creditService = {
   async getPortfolio(userId: string) {
     try {
       const { data } = await api.get<CreditCertificate[]>(
-        `/credits/portfolio/${userId}`
+        `/certificates/user/${userId}`
       );
       return data;
     } catch (error) {
@@ -43,4 +43,3 @@ export const creditService = {
     }
   }
 };
-

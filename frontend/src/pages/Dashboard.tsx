@@ -53,10 +53,21 @@ const DashboardPage = () => {
 
   // Listing creation form state
   const [title, setTitle] = useState("");
-  const [descriptionInput, setDescriptionInput] = useState("");
   const [carbonAmount, setCarbonAmount] = useState<number | "">("");
   // price per credit (VND) - default value; total price auto-updates by quantity
-  const [pricePerCredit, setPricePerCredit] = useState<number>(100000);
+  const [pricePerCredit, setPricePerCredit] = useState<number>(140000);
+  const [isVoluntary, setIsVoluntary] = useState(false);
+  const [isCompliance, setIsCompliance] = useState(false);
+  const [isIndividual, setIsIndividual] = useState(false);
+  const [isEnterprise, setIsEnterprise] = useState(false);
+  const [benefitsInput, setBenefitsInput] = useState("");
+  const [benefitsFlags, setBenefitsFlags] = useState({
+    "emission reduction": false,
+    "community support": false,
+    biodiversity: false,
+    "renewable energy": false
+  });
+  const [province, setProvince] = useState("");
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
   const handleCreateListing = async (e: React.FormEvent) => {
@@ -64,12 +75,29 @@ const DashboardPage = () => {
     setCreateError(null);
     setCreating(true);
       try {
-      const total = Number(carbonAmount || 0) * Number(pricePerCredit || 0);
+      // Clamp price per credit to allowed range
+      const minPrice = 140000;
+      const maxPrice = 270000;
+      const pricePer = Math.max(minPrice, Math.min(maxPrice, Number(pricePerCredit || 0)));
+      const total = Number(carbonAmount || 0) * pricePer;
+      // Compose a short description from selected options (backend expects a description field)
+      const categoryParts: string[] = [];
+      if (isVoluntary) categoryParts.push("Voluntary");
+      if (isCompliance) categoryParts.push("Compliance");
+      const buyerParts: string[] = [];
+      if (isIndividual) buyerParts.push("Individual");
+      if (isEnterprise) buyerParts.push("Enterprise");
+      const selectedBenefits = Object.entries(benefitsFlags)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      const composedDescription = `Categories: ${categoryParts.join(", ") || "-"}; Buyer types: ${buyerParts.join(", ") || "-"}; Benefits: ${selectedBenefits.join(", ") || "-"}; Province: ${province || "-"}`;
+
       const payload = {
         title,
-        description: descriptionInput,
+        description: composedDescription,
         carbonAmount: Number(carbonAmount),
-        price: Number(total),
+        // send price per credit (backend maps this to pricePerCredit)
+        price: Number(pricePer),
         sellerId: Number(user?.id)
       };
       await listingService.createListing(payload as any);
@@ -79,9 +107,15 @@ const DashboardPage = () => {
       setShowCreate(false);
       // Reset form
       setTitle("");
-      setDescriptionInput("");
+      setIsVoluntary(false);
+      setIsCompliance(false);
+      setIsIndividual(false);
+      setIsEnterprise(false);
+      setBenefitsInput("");
+      setBenefitsFlags({ "emission reduction": false, "community support": false, biodiversity: false, "renewable energy": false });
+      setProvince("");
       setCarbonAmount("");
-      setPricePerCredit(100000);
+      setPricePerCredit(140000);
     } catch (err) {
       setCreateError("Failed to submit listing request. Please try again.");
     } finally {
@@ -169,8 +203,57 @@ const DashboardPage = () => {
                     <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium">Description</label>
-                    <textarea value={descriptionInput} onChange={(e) => setDescriptionInput(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                    <label className="block text-sm font-medium">Categories</label>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={isVoluntary} onChange={(e) => setIsVoluntary(e.target.checked)} />
+                        <span className="text-sm">Voluntary</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={isCompliance} onChange={(e) => setIsCompliance(e.target.checked)} />
+                        <span className="text-sm">Compliance</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Buyer types</label>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={isIndividual} onChange={(e) => setIsIndividual(e.target.checked)} />
+                        <span className="text-sm">Individual</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={isEnterprise} onChange={(e) => setIsEnterprise(e.target.checked)} />
+                        <span className="text-sm">Enterprise</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Benefits</label>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {[
+                        "emission reduction",
+                        "community support",
+                        "biodiversity",
+                        "renewable energy"
+                      ].map((b) => (
+                        <label key={b} className="inline-flex items-center gap-2">
+                          <input type="checkbox" checked={(benefitsFlags as any)[b]} onChange={(e) => setBenefitsFlags(prev => ({ ...prev, [b]: e.target.checked }))} />
+                          <span className="text-sm">{b.charAt(0).toUpperCase() + b.slice(1)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Province / Area</label>
+                    <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2">
+                      <option value="">Select province</option>
+                      {[
+                        "Hanoi","Ho Chi Minh City","Da Nang","Hai Phong","Can Tho","Binh Duong","Dong Nai","Hue","Nha Trang","Quang Ninh","Bac Ninh","Thanh Hoa","Nghe An","Binh Thuan","Vinh Phuc","Long An","Hai Duong","Tra Vinh"
+                      ].map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium">Quantity (tCO₂e)</label>
@@ -178,11 +261,12 @@ const DashboardPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium">Price per tCO₂e (VND)</label>
-                    <input type="number" value={pricePerCredit} onChange={(e) => setPricePerCredit(Number(e.target.value || 0))} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                    <input type="number" min={140000} max={270000} value={pricePerCredit} onChange={(e) => setPricePerCredit(Number(e.target.value || 140000))} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                    <p className="text-xs text-muted-foreground mt-1">Allowed range: 140,000 — 270,000 VND per tCO₂e</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium">Total price (VND)</label>
-                    <input type="text" value={((Number(carbonAmount || 0) * Number(pricePerCredit || 0))).toLocaleString('vi-VN')} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-slate-50" />
+                    <input type="text" value={(Number(carbonAmount || 0) * Number(pricePerCredit || 0)).toLocaleString('vi-VN')} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-slate-50" />
                   </div>
                   {createError && <p className="text-sm text-red-600">{createError}</p>}
                               <DialogFooter>
@@ -217,14 +301,14 @@ const DashboardPage = () => {
             <Skeleton className="h-20 w-full" />
           ) : myListingsQuery.data && myListingsQuery.data.length > 0 ? (
             myListingsQuery.data.map((l) => (
-              <div key={l.id} className="flex items-center justify-between border-b py-2">
+                <div key={l.id} className="flex items-center justify-between border-b py-2">
                 <div>
                   <p className="font-medium">{l.name}</p>
                   <p className="text-xs text-muted-foreground">{l.summary}</p>
                 </div>
                 <div className="text-sm">
-                  <span className="mr-3">{l.totalCredits} tCO₂e</span>
-                  <span className="font-medium">{l.pricePerCredit} VND</span>
+                  <span className="mr-3">{Number(l.totalCredits).toLocaleString('vi-VN')} tCO₂e</span>
+                  <span className="font-medium">{Number(l.pricePerCredit).toLocaleString('vi-VN')} VND/tCO₂e</span>
                   <div className="text-xs text-muted-foreground">Status: {l.status}</div>
                 </div>
               </div>
@@ -300,7 +384,7 @@ const DashboardPage = () => {
                   <div className="flex items-center justify-between">
                     <p className="font-medium text-slate-900">{listing.name}</p>
                     <span className="text-xs font-medium text-emerald-600">
-                      ${listing.pricePerCredit.toFixed(2)}/tCO₂e
+                      {Number(listing.pricePerCredit).toLocaleString('vi-VN')} VND/tCO₂e
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">

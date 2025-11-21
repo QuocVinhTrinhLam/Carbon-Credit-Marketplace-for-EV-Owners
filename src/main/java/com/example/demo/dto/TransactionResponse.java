@@ -23,6 +23,10 @@ public class TransactionResponse {
     private Long listingId;
     private String listingTitle;
     private BigDecimal amount;
+    //Thêm field
+    private BigDecimal pricePerCredit;
+    private Integer quantity;
+
     private Transaction.TransactionStatus status;
     private LocalDateTime createdAt;
     
@@ -37,6 +41,14 @@ public class TransactionResponse {
         response.setSellerEmail(transaction.getSeller().getEmail());
         response.setListingId(transaction.getListing().getId());
         response.setListingTitle(transaction.getListing().getTitle());
+        // Thêm — QUANTITY = số carbon bạn định nghĩa (kg hay credit)
+        int qty = transaction.getListing().getCarbonAmount().intValue();
+        response.setQuantity(qty);
+
+        // Thêm — price per credit (đơn giá)
+        BigDecimal pricePerCredit = transaction.getListing().getPrice();
+        response.setPricePerCredit(pricePerCredit);
+
         response.setAmount(transaction.getAmount());
         response.setStatus(transaction.getStatus());
         response.setCreatedAt(transaction.getCreatedAt());

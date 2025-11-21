@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -111,6 +112,37 @@ public class FileUploadService {
         } catch (Exception ex) {
             log.error("Error extracting text from file", ex);
             return "";
+        }
+    }
+
+    // Check the uploaded document contains required journey sections (Vietnamese headings)
+    public boolean hasRequiredJourneySections(MultipartFile file) {
+        try (InputStream is = file.getInputStream()) {
+            AutoDetectParser parser = new AutoDetectParser();
+            BodyContentHandler handler = new BodyContentHandler(-1);
+            Metadata metadata = new Metadata();
+            parser.parse(is, handler, metadata, new ParseContext());
+
+            String raw = handler.toString();
+            if (raw == null) return false;
+
+            // normalize and remove diacritics to allow matching variants
+            String normalized = Normalizer.normalize(raw, Normalizer.Form.NFD)
+                    .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                    .toLowerCase(Locale.ROOT);
+
+            // look for Part I related phrases
+            boolean hasPartI = (normalized.contains("phan i") || normalized.contains("phan1") || normalized.contains("phani") || normalized.contains("phần i"))
+                    && (normalized.contains("thong tin chu so huu") || normalized.contains("thong tin") && normalized.contains("phuong tien") || normalized.contains("chu so huu") || normalized.contains("chủ sở hữu"));
+
+            // look for Part II related phrases
+            boolean hasPartII = (normalized.contains("phan ii") || normalized.contains("phan2") || normalized.contains("phanii") || normalized.contains("phần ii"))
+                    && (normalized.contains("du lieu hanh trinh") || normalized.contains("hanh trinh tong hop") || (normalized.contains("du lieu") && normalized.contains("hanh trinh")) || normalized.contains("hành trình"));
+
+            return hasPartI && hasPartII;
+        } catch (Exception ex) {
+            log.error("Error checking required journey sections", ex);
+            return false;
         }
     }
 }

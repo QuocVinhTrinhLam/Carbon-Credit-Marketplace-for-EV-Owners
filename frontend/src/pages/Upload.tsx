@@ -27,7 +27,14 @@ const UploadPage: React.FC = () => {
       setResult(resp.data);
     } catch (err: any) {
       console.error(err);
-      setError(err?.response?.data?.message || err.message || "Upload failed");
+        const respData = err?.response?.data;
+        if (respData) {
+          // show server response (may include extractedText and message)
+          setResult(respData);
+          setError(respData.message || null);
+        } else {
+          setError(err.message || "Upload failed");
+        }
     } finally {
       setLoading(false);
     }

@@ -74,7 +74,7 @@ const DashboardPage = () => {
     e.preventDefault();
     setCreateError(null);
     setCreating(true);
-      try {
+    try {
       // Clamp price per credit to allowed range
       const minPrice = 140000;
       const maxPrice = 270000;
@@ -132,7 +132,7 @@ const DashboardPage = () => {
   }, [transactionsQuery.data]);
 
   return (
-    <div className="space-y-6">
+    <div id="dashboard-section" className="space-y-6">
       <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 px-6 py-8 text-white shadow-lg">
         <h1 className="text-2xl font-semibold">
           Hello {user?.name?.split(" ")[0] ?? "there"}, welcome back 👋
@@ -249,7 +249,7 @@ const DashboardPage = () => {
                     <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2">
                       <option value="">Select province</option>
                       {[
-                        "Hanoi","Ho Chi Minh City","Da Nang","Hai Phong","Can Tho","Binh Duong","Dong Nai","Hue","Nha Trang","Quang Ninh","Bac Ninh","Thanh Hoa","Nghe An","Binh Thuan","Vinh Phuc","Long An","Hai Duong","Tra Vinh"
+                        "Hanoi", "Ho Chi Minh City", "Da Nang", "Hai Phong", "Can Tho", "Binh Duong", "Dong Nai", "Hue", "Nha Trang", "Quang Ninh", "Bac Ninh", "Thanh Hoa", "Nghe An", "Binh Thuan", "Vinh Phuc", "Long An", "Hai Duong", "Tra Vinh"
                       ].map((p) => (
                         <option key={p} value={p}>{p}</option>
                       ))}
@@ -269,12 +269,12 @@ const DashboardPage = () => {
                     <input type="text" value={(Number(carbonAmount || 0) * Number(pricePerCredit || 0)).toLocaleString('vi-VN')} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-slate-50" />
                   </div>
                   {createError && <p className="text-sm text-red-600">{createError}</p>}
-                              <DialogFooter>
-                                <div className="flex gap-2">
-                                  <Button type="submit" disabled={creating}>{creating ? "Submitting..." : "Submit listing request"}</Button>
-                                  <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
-                                </div>
-                              </DialogFooter>
+                  <DialogFooter>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={creating}>{creating ? "Submitting..." : "Submit listing request"}</Button>
+                      <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
+                    </div>
+                  </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -301,7 +301,7 @@ const DashboardPage = () => {
             <Skeleton className="h-20 w-full" />
           ) : myListingsQuery.data && myListingsQuery.data.length > 0 ? (
             myListingsQuery.data.map((l) => (
-                <div key={l.id} className="flex items-center justify-between border-b py-2">
+              <div key={l.id} className="flex items-center justify-between border-b py-2">
                 <div>
                   <p className="font-medium">{l.name}</p>
                   <p className="text-xs text-muted-foreground">{l.summary}</p>

@@ -50,7 +50,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div id="profile-section" className="space-y-6">
       <header className="rounded-xl border bg-white px-6 py-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">

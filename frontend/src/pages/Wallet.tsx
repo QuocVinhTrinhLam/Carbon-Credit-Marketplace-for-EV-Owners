@@ -75,7 +75,7 @@ const WalletPage = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div id="wallet-section" className="space-y-6">
       <header className="flex flex-col gap-3 rounded-xl border bg-white px-6 py-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Wallet</h1>
@@ -124,8 +124,8 @@ const WalletPage = () => {
                   ? undefined
                   : transactionsQuery.data?.find((transaction) => transaction.type === "TOP_UP")
                     ? `${transactionsQuery.data
-                          ?.find((transaction) => transaction.type === "TOP_UP")!
-                          .amount.toLocaleString('vi-VN')} VND`
+                      ?.find((transaction) => transaction.type === "TOP_UP")!
+                      .amount.toLocaleString('vi-VN')} VND`
                     : "—"
               }
             />
@@ -266,7 +266,7 @@ function TopUpDialog({ onSubmit, isLoading }: TopUpDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="paymentMethod"
@@ -294,7 +294,7 @@ function TopUpDialog({ onSubmit, isLoading }: TopUpDialogProps) {
                           </div>
                         </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3 space-y-0 rounded-md border p-4 hover:bg-slate-50">
                         <RadioGroupItem value="direct" id="direct" />
                         <Label
@@ -316,7 +316,7 @@ function TopUpDialog({ onSubmit, isLoading }: TopUpDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? "Processing..." : "Confirm top-up"}

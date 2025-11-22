@@ -86,7 +86,7 @@ const MarketplacePage = () => {
   }, [listingsQuery.data, search, priceFilter, provinceFilter, benefitsFilter]);
 
   return (
-    <div className="space-y-6">
+    <div id="marketplace-section" className="space-y-6">
       <header className="rounded-xl border bg-white px-6 py-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -135,7 +135,7 @@ const MarketplacePage = () => {
             <SelectContent>
               <SelectItem value="ALL">All provinces</SelectItem>
               {[
-                "Hanoi","Ho Chi Minh City","Da Nang","Hai Phong","Can Tho","Binh Duong","Dong Nai","Hue","Nha Trang","Quang Ninh","Bac Ninh","Thanh Hoa","Nghe An","Binh Thuan","Vinh Phuc","Long An","Hai Duong","Tra Vinh"
+                "Hanoi", "Ho Chi Minh City", "Da Nang", "Hai Phong", "Can Tho", "Binh Duong", "Dong Nai", "Hue", "Nha Trang", "Quang Ninh", "Bac Ninh", "Thanh Hoa", "Nghe An", "Binh Thuan", "Vinh Phuc", "Long An", "Hai Duong", "Tra Vinh"
               ].map((p) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}

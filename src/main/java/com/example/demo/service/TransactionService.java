@@ -26,12 +26,13 @@ public class TransactionService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final WalletService walletService;
-    private final CertificateService CertificateService; //Thêm CertificateService
+    private final CertificateService certificateService; // Chuẩn hóa tên biến
 
     @Transactional
+    @SuppressWarnings("null")
     public TransactionResponse createTransaction(TransactionRequest request) {
-        log.info("Creating transaction for listing ID: {} by buyer ID: {}",
-                request.getListingId(), request.getBuyerId());
+        log.info("Creating transaction for listing ID: {} by buyer ID: {} with quantity: {}",
+                request.getListingId(), request.getBuyerId(), request.getQuantity());
 
         // 1. Validate listing exists and is available
         Listing listing = listingRepository.findById(request.getListingId())
@@ -41,48 +42,60 @@ public class TransactionService {
         if (listing.getStatus() != Listing.ListingStatus.OPEN) {
             throw new RuntimeException("Listing is not available for purchase");
         }
+        
+        // 2. Validate quantity and calculate price
+        BigDecimal requestedQuantity = request.getQuantity() != null ? new BigDecimal(request.getQuantity().toString()) : BigDecimal.ONE;
+        BigDecimal availableQuantity = listing.getCarbonAmount();
 
-        // 2. Validate buyer exists
+        // Kiểm tra số lượng mua có vượt quá số lượng còn lại không
+        if (requestedQuantity.compareTo(availableQuantity) > 0) {
+            throw new RuntimeException("Requested quantity exceeds available quantity on listing. Available: " + availableQuantity);
+        }
+
+        // GIẢ ĐỊNH: listing.getPrice() là GIÁ ĐƠN VỊ (Price per Carbon Credit)
+        BigDecimal transactionAmount = listing.getPrice().multiply(requestedQuantity);
+        
+        // 3. Validate buyer exists
         User buyer = userRepository.findById(request.getBuyerId())
                 .orElseThrow(() ->
                         new RuntimeException("Buyer not found with ID: " + request.getBuyerId()));
 
-        // 3. Validate buyer is not the seller
+        // 4. Validate buyer is not the seller
         if (buyer.getId().equals(listing.getSeller().getId())) {
             throw new RuntimeException("Buyer cannot purchase their own listing");
         }
 
-        // 4. Check if buyer has sufficient balance in carbon wallet
-        BigDecimal buyerBalance = walletService.getBalance(buyer.getId()); // <- dùng ví, không dùng user.getCarbonBalance()
-        BigDecimal price = listing.getPrice();
+        // 5. Check if buyer has sufficient balance in carbon wallet
+        BigDecimal buyerBalance = walletService.getBalance(buyer.getId()); 
 
-        if (buyerBalance.compareTo(price) < 0) {
-            throw new RuntimeException("Insufficient balance for purchase");
+        if (buyerBalance.compareTo(transactionAmount) < 0) {
+            throw new RuntimeException("Insufficient balance for purchase. Needed: " + transactionAmount);
         }
 
-        // 5. Create transaction in PENDING
+        // 6. Create transaction in PENDING
         Transaction transaction = new Transaction();
         transaction.setBuyer(buyer);
         transaction.setSeller(listing.getSeller());
         transaction.setListing(listing);
-        transaction.setAmount(price);
+        transaction.setAmount(transactionAmount); // Tổng tiền phải trả
+        // LƯU SỐ LƯỢNG CARBON ĐƯỢC MUA VÀO TRANSACTION (CẦN FIELD carbonQuantity trong Entity Transaction)
+        transaction.setCarbonQuantity(requestedQuantity); 
         transaction.setStatus(Transaction.TransactionStatus.PENDING);
 
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // 6. Reserve the listing so người khác không mua cùng lúc
-        listing.setStatus(Listing.ListingStatus.RESERVED);
-        listingRepository.save(listing);
-
+        // 7. KHÔNG RESERVE LISTING. Listing vẫn để OPEN cho đến khi confirm.
+        
         log.info("Transaction created with ID: {}", savedTransaction.getId());
 
         return TransactionResponse.fromTransaction(savedTransaction);
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public TransactionResponse confirmTransaction(Long transactionId) {
         log.info("Confirming transaction with ID: {}", transactionId);
-
+        
         // 1. Load transaction
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() ->
@@ -94,34 +107,49 @@ public class TransactionService {
         }
 
         // 3. Thực hiện chuyển tiền carbon giữa buyer -> seller
-        //    - Debit ví buyer
+        // - Debit ví buyer
         walletService.debit(
                 transaction.getBuyer().getId(),
                 transaction.getAmount(),
                 "Purchase of listing: " + transaction.getListing().getTitle()
         );
 
-        //    - Credit ví seller
+        // - Credit ví seller
         walletService.credit(
                 transaction.getSeller().getId(),
                 transaction.getAmount(),
                 "Sale of listing: " + transaction.getListing().getTitle()
         );
-        // ISSUE CERTIFICATE cho buyer
-        Double credits = transaction.getListing().getCarbonAmount().doubleValue();
         
-        CertificateService.createCertificate(
-            transaction.getBuyer().getId(),
-            credits
-         );
+        // ISSUE CERTIFICATE cho buyer
+        // Dùng số lượng carbon mua từ Transaction, không phải Listing
+        BigDecimal purchasedQuantity = transaction.getCarbonQuantity();
+        Double credits = purchasedQuantity.doubleValue(); // Cần chú ý về độ chính xác khi chuyển sang Double
+        
+        certificateService.createCertificate(
+             transaction.getBuyer().getId(),
+             credits
+        );
 
-        // 4. Mark transaction as COMPLETED
+        // 4. Cập nhật số lượng còn lại của Listing
+        Listing listing = transaction.getListing();
+        BigDecimal remainingQuantity = listing.getCarbonAmount().subtract(purchasedQuantity);
+        
+        listing.setCarbonAmount(remainingQuantity);
+
+        // 5. Cập nhật trạng thái Listing
+        if (remainingQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            // Nếu số lượng còn lại <= 0, đánh dấu Listing là SOLD
+            listing.setStatus(Listing.ListingStatus.SOLD);
+            log.info("Listing {} is now SOLD out.", listing.getId());
+        } 
+        
+        // Nếu còn lại > 0, Listing vẫn giữ trạng thái OPEN
+        listingRepository.save(listing);
+
+        // 6. Mark transaction as COMPLETED
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         Transaction savedTransaction = transactionRepository.save(transaction);
-
-        // 5. Mark listing as SOLD
-        transaction.getListing().setStatus(Listing.ListingStatus.SOLD);
-        listingRepository.save(transaction.getListing());
 
         log.info("Transaction confirmed and completed with ID: {}", transactionId);
 
@@ -129,6 +157,7 @@ public class TransactionService {
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public TransactionResponse cancelTransaction(Long transactionId) {
         log.info("Cancelling transaction with ID: {}", transactionId);
 
@@ -146,15 +175,15 @@ public class TransactionService {
         transaction.setStatus(Transaction.TransactionStatus.CANCELLED);
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // 4. Listing quay lại OPEN cho người khác mua
-        transaction.getListing().setStatus(Listing.ListingStatus.OPEN);
-        listingRepository.save(transaction.getListing());
-
+        // 4. Không cần thay đổi trạng thái Listing vì Listing không bị RESERVED
+        
         log.info("Transaction cancelled with ID: {}", transactionId);
 
         return TransactionResponse.fromTransaction(savedTransaction);
     }
-
+    
+    // Các phương thức truy vấn (getTransactionsByUserId, getTransactionsByBuyer, v.v.)
+    // (Giữ nguyên)
     public List<TransactionResponse> getTransactionsByUserId(Long userId) {
         log.info("Fetching transactions for user ID: {}", userId);
 
@@ -188,6 +217,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    @SuppressWarnings("null")
     public TransactionResponse getTransactionById(Long id) {
         log.info("Fetching transaction with ID: {}", id);
 

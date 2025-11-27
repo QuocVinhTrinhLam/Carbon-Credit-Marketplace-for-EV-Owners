@@ -41,11 +41,11 @@ public class TransactionResponse {
         response.setSellerEmail(transaction.getSeller().getEmail());
         response.setListingId(transaction.getListing().getId());
         response.setListingTitle(transaction.getListing().getTitle());
-        // Thêm — QUANTITY = số carbon bạn định nghĩa (kg hay credit)
-        int qty = transaction.getListing().getCarbonAmount().intValue();
+        // QUANTITY = số carbon ĐƯỢC MUA trong transaction này (không phải toàn bộ listing)
+        int qty = transaction.getCarbonQuantity().intValue();
         response.setQuantity(qty);
 
-        // Thêm — price per credit (đơn giá)
+        // price per credit (đơn giá)
         BigDecimal pricePerCredit = transaction.getListing().getPrice();
         response.setPricePerCredit(pricePerCredit);
 

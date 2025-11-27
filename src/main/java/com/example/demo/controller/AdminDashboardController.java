@@ -61,7 +61,7 @@ public class AdminDashboardController {
                 .filter(t -> t.getStatus() == Transaction.TransactionStatus.PENDING)
                 .count();
         long confirmed = transactions.stream()
-                .filter(t -> t.getStatus() == Transaction.TransactionStatus.CONFIRMED)
+                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED)
                 .count();
 
         data.put("transactionsCompleted", completed);
@@ -79,7 +79,7 @@ public class AdminDashboardController {
 
         // Platform revenue: sum of amounts for COMPLETED transactions
         BigDecimal platformRevenue = transactions.stream()
-                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.CONFIRMED)
+                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED)
                 .map(Transaction::getAmount)
                 .filter(a -> a != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -102,10 +102,10 @@ public class AdminDashboardController {
         data.put("usersPrevMonth", usersPrevMonth);
 
         BigDecimal revenueThisMonth = transactionRepository.findAll().stream()
-                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.CONFIRMED))
+                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED))
                 .map(Transaction::getAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal revenuePrevMonth = transactionRepository.findAll().stream()
-                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startPrev) && t.getCreatedAt().isBefore(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.CONFIRMED))
+                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startPrev) && t.getCreatedAt().isBefore(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED))
                 .map(Transaction::getAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);
         data.put("revenueThisMonth", revenueThisMonth);
         data.put("revenuePrevMonth", revenuePrevMonth);

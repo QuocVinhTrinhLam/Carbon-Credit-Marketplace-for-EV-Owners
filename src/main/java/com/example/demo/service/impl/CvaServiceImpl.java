@@ -24,6 +24,7 @@ public class CvaServiceImpl implements CvaService {
     }
 
     @Override
+    @SuppressWarnings("null")
     public CreditRequest getRequestById(Long id) {
         return creditRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));

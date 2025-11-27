@@ -7,6 +7,8 @@ type TransactionResponse = {
   listingId?: number;
   listingTitle?: string;
   amount?: number;
+  quantity?: number;
+  pricePerCredit?: number;
   status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   createdAt?: string;
 };
@@ -25,7 +27,10 @@ export type Transaction = {
 
 const mapTransaction = (tx: TransactionResponse, userId: string): Transaction => {
   const isBuyer = String(tx.buyerId ?? "") === userId;
-  const amount = Number(tx.amount ?? 0);
+  const totalAmount = Number(tx.amount ?? 0);
+  const quantity = Number(tx.quantity ?? 1);
+  // prefer explicit pricePerCredit returned by backend; otherwise derive from total/quantity
+  const pricePerCredit = Number(tx.pricePerCredit ?? (quantity > 0 ? totalAmount / quantity : totalAmount));
   const status =
     tx.status === "COMPLETED"
       ? "COMPLETED"
@@ -38,9 +43,9 @@ const mapTransaction = (tx: TransactionResponse, userId: string): Transaction =>
     listingId: String(tx.listingId ?? ""),
     listingName: tx.listingTitle ?? "Listing",
     type: isBuyer ? "BUY" : "SELL",
-    quantity: 1,
-    pricePerCredit: amount,
-    totalAmount: amount,
+    quantity,
+    pricePerCredit,
+    totalAmount,
     status,
     createdAt: tx.createdAt ?? new Date().toISOString()
   };
@@ -54,11 +59,15 @@ export const transactionService = {
     return (data ?? []).map((tx) => mapTransaction(tx, userId));
   },
 
-  async buy(payload: { listingId: string; buyerId: string; quantity?: number }) {
-    const { data } = await api.post<TransactionResponse>("/transactions", {
+  async buy(payload: { listingId: string; buyerId: string; quantity?: number; pricePerCredit?: number }) {
+    const body: any = {
       listingId: Number(payload.listingId),
       buyerId: Number(payload.buyerId)
-    });
+    };
+    if (payload.quantity !== undefined) body.quantity = Number(payload.quantity);
+    if (payload.pricePerCredit !== undefined) body.pricePerCredit = Number(payload.pricePerCredit);
+
+    const { data } = await api.post<TransactionResponse>("/transactions", body);
 
     const transactionId = data?.id;
 
@@ -70,6 +79,6 @@ export const transactionService = {
       `/transactions/${transactionId}/confirm`
     );
 
-    return mapTransaction(confirmedTransaction ?? data, payload.buyerId);
+    return mapTransaction(confirmedTransaction ?? data, String(payload.buyerId));
   }
 };

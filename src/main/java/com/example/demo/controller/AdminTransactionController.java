@@ -3,12 +3,8 @@ package com.example.demo.controller;
 import com.example.demo.entity.Transaction;
 import com.example.demo.entity.Dispute;
 import com.example.demo.entity.DisputeStatus;
-import com.example.demo.entity.DisputeResolution;
 import com.example.demo.repository.TransactionRepository;
 import com.example.demo.repository.DisputeRepository;
-
-import com.example.demo.entity.Transaction;
-import com.example.demo.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -58,6 +54,7 @@ public class AdminTransactionController {
 
     // ✅ Lấy giao dịch theo ID
     @GetMapping("/{id}")
+    @SuppressWarnings("null")
     public ResponseEntity<?> getTransactionById(@PathVariable Long id) {
         log.info("Admin - Get transaction by ID: {}", id);
         return transactionRepository.findById(id)
@@ -77,6 +74,7 @@ public class AdminTransactionController {
 
     // ✅ Hủy giao dịch
     @PutMapping("/{id}/cancel")
+    @SuppressWarnings("null")
     public ResponseEntity<?> cancelTransaction(@PathVariable Long id) {
         log.info("Admin - Cancel transaction ID: {}", id);
         return transactionRepository.findById(id)
@@ -95,11 +93,12 @@ public class AdminTransactionController {
 
     // ✅ Xác nhận giao dịch
     @PutMapping("/{id}/confirm")
+    @SuppressWarnings("null")
     public ResponseEntity<?> confirmTransaction(@PathVariable Long id) {
         log.info("Admin - Confirm transaction ID: {}", id);
         return transactionRepository.findById(id)
                 .map(tx -> {
-                    tx.setStatus(Transaction.TransactionStatus.CONFIRMED);
+                    tx.setStatus(Transaction.TransactionStatus.COMPLETED);
                     transactionRepository.save(tx);
                     return ResponseEntity.ok(Map.of(
                             "message", "Transaction confirmed successfully",
@@ -113,6 +112,7 @@ public class AdminTransactionController {
 
     // ✅ Hoàn tất giao dịch
     @PutMapping("/{id}/complete")
+    @SuppressWarnings("null")
     public ResponseEntity<?> completeTransaction(@PathVariable Long id) {
         log.info("Admin - Complete transaction ID: {}", id);
         return transactionRepository.findById(id)
@@ -133,6 +133,7 @@ public class AdminTransactionController {
      * Get disputes for a transaction
      */
     @GetMapping("/{id}/disputes")
+    @SuppressWarnings("null")
     public ResponseEntity<?> getTransactionDisputes(@PathVariable Long id) {
         log.info("Admin - Get disputes for transaction ID: {}", id);
         

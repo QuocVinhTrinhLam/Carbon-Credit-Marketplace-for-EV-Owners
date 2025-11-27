@@ -26,11 +26,11 @@ public class DisputeNotificationConsumer {
 
         try {
             // 1. Lấy đầy đủ thông tin từ DB
+            @SuppressWarnings("null")
             Dispute dispute = disputeRepository.findById(event.getDisputeId())
                     .orElseThrow(() -> new RuntimeException("Dispute not found in consumer: " + event.getDisputeId()));
             
             Transaction transaction = dispute.getTransaction();
-            User buyer = transaction.getBuyer();
             User seller = transaction.getSeller();
 
             // 2. Thực hiện các tác vụ bất đồng bộ (chỉ ghi log)

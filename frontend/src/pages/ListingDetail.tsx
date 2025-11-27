@@ -83,7 +83,8 @@ const ListingDetailPage = () => {
     buyMutation.mutate({
       listingId: id,
       buyerId: user.id,
-      quantity: values.quantity
+      quantity: values.quantity,
+      pricePerCredit: listing.pricePerCredit
     });
   };
 

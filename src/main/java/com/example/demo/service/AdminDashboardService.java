@@ -17,6 +17,7 @@ public class AdminDashboardService {
     private final ListingRepository listingRepository;
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
+    @SuppressWarnings("unused")
     private final WalletTransactionRepository walletTransactionRepository;
     private final CarbonWalletRepository carbonWalletRepository;
     private final DisputeRepository disputeRepository;

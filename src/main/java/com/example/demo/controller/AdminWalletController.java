@@ -75,6 +75,7 @@ public class AdminWalletController {
      */
     @GetMapping("/user/{userId}")
     @Operation(summary = "Get user wallets", description = "Get both money and carbon wallets for a specific user")
+    @SuppressWarnings("null")
     public ResponseEntity<?> getUserWallets(@PathVariable Long userId) {
         log.info("Admin - Get wallets for user ID: {}", userId);
 

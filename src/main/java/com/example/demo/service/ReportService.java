@@ -37,6 +37,7 @@ public class ReportService {
         return repo.findAll(pageable);
     }
 
+    @SuppressWarnings("null")
     public Report get(Long id) {
         return repo.findById(id).orElseThrow();
     }

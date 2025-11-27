@@ -22,32 +22,28 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Người mua
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "buyer_id", nullable = true)
+    @JoinColumn(name = "buyer_id", nullable = false) // Đã cập nhật: không cho phép null
     private User buyer;
 
-    // Người bán
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seller_id", nullable = true)
+    @JoinColumn(name = "seller_id", nullable = false) // Đã cập nhật: không cho phép null
     private User seller;
 
-    // Bài đăng niêm yết
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = true)
+    @JoinColumn(name = "listing_id", nullable = false) // Đã cập nhật: không cho phép null
     private Listing listing;
 
-    // Số tiền giao dịch
     @Column(nullable = false, precision = 19, scale = 4)
     @NotNull(message = "Amount is required")
     @Positive(message = "Amount must be positive")
     private BigDecimal amount;
     
-    // Thêm quantity
-    @Column(nullable = false)
-    private Integer quantity = 1;
+    @Column(name = "carbon_quantity", nullable = false, precision = 19, scale = 4)
+    @NotNull(message = "Carbon quantity is required")
+    @Positive(message = "Carbon quantity must be positive")
+    private BigDecimal carbonQuantity;
 
-    // Trạng thái giao dịch
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionStatus status = TransactionStatus.PENDING;
@@ -58,13 +54,19 @@ public class Transaction {
 
     public enum TransactionStatus {
         PENDING,
-        CONFIRMED,
         CANCELLED,
         COMPLETED
     }
 
-    // ✅ Setter hoạt động bình thường
     public void setStatus(TransactionStatus status) {
         this.status = status;
+    }
+
+    public BigDecimal getCarbonQuantity() {
+        return this.carbonQuantity;
+    }
+
+    public void setCarbonQuantity(BigDecimal carbonQuantity) {
+        this.carbonQuantity = carbonQuantity;
     }
 }

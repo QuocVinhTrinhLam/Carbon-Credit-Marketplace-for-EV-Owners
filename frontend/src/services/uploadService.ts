@@ -80,5 +80,32 @@ export const uploadService = {
             console.error("uploadEvidenceForRequest error", err);
             throw err;
         }
+    },
+
+    async estimateFromForm(formBody: Record<string, any>) {
+        try {
+            const { data } = await api.post<any>("/uploads/estimate/form", formBody, {
+                headers: { "Content-Type": "application/json" }
+            });
+            return data;
+        } catch (err) {
+            console.error("estimateFromForm error", err);
+            throw err;
+        }
+    },
+
+    async issueCredits(userId: number | string, creditsTons: number | string) {
+        try {
+            const { data } = await api.post<string>("/uploads/issue-credits", {
+                userId,
+                creditsTons
+            }, {
+                headers: { "Content-Type": "application/json" }
+            });
+            return data;
+        } catch (err) {
+            console.error("issueCredits error", err);
+            throw err;
+        }
     }
 };

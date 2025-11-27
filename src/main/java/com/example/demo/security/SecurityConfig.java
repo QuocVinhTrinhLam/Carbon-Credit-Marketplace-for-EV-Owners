@@ -1,6 +1,8 @@
 package com.example.demo.security;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,8 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -44,7 +45,8 @@ public class SecurityConfig {
                                 "/actuator/**",
                                 "/swagger-ui/**",
                                 "/api/payment/vnpay/ipn",
-                                "/api/payment/vnpay/return"  // VNPay IPN callback (public)
+                                "/api/payment/vnpay/return",  // VNPay IPN callback (public)
+                                "/api/uploads/issue-credits"  // Issue credits endpoint (public for file upload flow)
                         ).permitAll()
                         
                         // Allow ChatBox
@@ -70,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/credit-requests/**").authenticated()
                         .requestMatchers("/api/co2/**").authenticated()
                         .requestMatchers("/api/certificates/**").authenticated()
+                        .requestMatchers("/api/uploads/**").authenticated()
                         
                         // All other requests require authentication
                         .anyRequest().authenticated()

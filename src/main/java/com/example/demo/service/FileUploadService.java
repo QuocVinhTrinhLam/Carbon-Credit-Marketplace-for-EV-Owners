@@ -115,6 +115,23 @@ public class FileUploadService {
         }
     }
 
+    /**
+     * Estimate CO2 (kg) from explicit numeric fields provided in a form.
+     */
+    public BigDecimal estimateFromFields(BigDecimal distanceKm, BigDecimal energyKwh, BigDecimal liters, BigDecimal explicitCo2Kg) {
+        BigDecimal totalKg = BigDecimal.ZERO;
+        try {
+            if (explicitCo2Kg != null) totalKg = totalKg.add(explicitCo2Kg);
+            if (energyKwh != null) totalKg = totalKg.add(energyKwh.multiply(BigDecimal.valueOf(0.475)));
+            if (distanceKm != null) totalKg = totalKg.add(distanceKm.multiply(BigDecimal.valueOf(0.21)));
+            if (liters != null) totalKg = totalKg.add(liters.multiply(BigDecimal.valueOf(2.31)));
+            return totalKg.setScale(4, RoundingMode.HALF_UP);
+        } catch (Exception ex) {
+            log.error("Error estimating from fields", ex);
+            return BigDecimal.ZERO;
+        }
+    }
+
     // Check the uploaded document contains required journey sections (Vietnamese headings)
     public boolean hasRequiredJourneySections(MultipartFile file) {
         try (InputStream is = file.getInputStream()) {

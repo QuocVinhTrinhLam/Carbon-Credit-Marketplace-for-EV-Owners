@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { api } from "../services/api";
+import { uploadService } from "../services/uploadService";
 import { useAuth } from "../hooks/useAuth";
 
 const UploadPage: React.FC = () => {
@@ -8,6 +9,14 @@ const UploadPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // form-only fields
+  const [vehicleId, setVehicleId] = useState("");
+  const [tripDate, setTripDate] = useState("");
+  const [distanceKm, setDistanceKm] = useState<string>("");
+  const [energyKwh, setEnergyKwh] = useState<string>("");
+  const [liters, setLiters] = useState<string>("");
+  const [estimateLoading, setEstimateLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +34,16 @@ const UploadPage: React.FC = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(resp.data);
+      // auto-issue credits if upload successful and creditsIssued > 0
+      if (resp.data?.creditsIssued && Number(resp.data.creditsIssued) > 0 && user) {
+        try {
+          await uploadService.issueCredits(user.id, resp.data.creditsIssued);
+          setError(null);
+        } catch (issueErr: any) {
+          console.warn("Failed to auto-issue credits", issueErr);
+          setError("Upload done but credits could not be issued");
+        }
+      }
     } catch (err: any) {
       console.error(err);
         const respData = err?.response?.data;
@@ -59,6 +78,83 @@ const UploadPage: React.FC = () => {
           {loading ? "Uploading..." : "Upload & Estimate"}
         </button>
       </form>
+
+      <hr className="my-6" />
+
+      <div className="p-4 border rounded">
+        <h3 className="font-semibold mb-2">Form-only estimate</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm">Vehicle ID</label>
+            <input type="text" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} className="mt-1 w-full p-2 border rounded" />
+          </div>
+          <div>
+            <label className="block text-sm">Trip Date</label>
+            <input type="date" value={tripDate} onChange={(e) => setTripDate(e.target.value)} className="mt-1 w-full p-2 border rounded" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-3">
+          <div>
+            <label className="block text-sm">Distance (km)</label>
+            <input type="number" step="0.1" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} className="mt-1 w-full p-2 border rounded" />
+          </div>
+          <div>
+            <label className="block text-sm">Energy (kWh)</label>
+            <input type="number" step="0.1" value={energyKwh} onChange={(e) => setEnergyKwh(e.target.value)} className="mt-1 w-full p-2 border rounded" />
+          </div>
+          <div>
+            <label className="block text-sm">Fuel (liters)</label>
+            <input type="number" step="0.1" value={liters} onChange={(e) => setLiters(e.target.value)} className="mt-1 w-full p-2 border rounded" />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={estimateLoading}
+            onClick={async () => {
+              setEstimateLoading(true);
+              setError(null);
+              try {
+                const body: Record<string, any> = {
+                  userId: (user && (user.id)) || undefined,
+                  vehicleId: vehicleId || undefined,
+                  tripDate: tripDate || undefined,
+                  distanceKm: distanceKm ? Number(distanceKm) : undefined,
+                  energyKwh: energyKwh ? Number(energyKwh) : undefined,
+                  liters: liters ? Number(liters) : undefined
+                };
+                const resp = await uploadService.estimateFromForm(body);
+                setResult(resp);
+                // auto-issue credits if estimate successful and creditsIssued > 0
+                if (resp?.creditsIssued && Number(resp.creditsIssued) > 0 && user) {
+                  try {
+                    await uploadService.issueCredits(user.id, resp.creditsIssued);
+                    setError(null);
+                  } catch (issueErr: any) {
+                    console.warn("Failed to auto-issue credits", issueErr);
+                    setError("Estimate done but credits could not be issued");
+                  }
+                }
+              } catch (err: any) {
+                console.error(err);
+                const respData = err?.response?.data;
+                if (respData) {
+                  setResult(respData);
+                  setError(respData.message || null);
+                } else {
+                  setError(err.message || "Estimate failed");
+                }
+              } finally {
+                setEstimateLoading(false);
+              }
+            }}
+          >
+            {estimateLoading ? "Estimating..." : "Estimate (form only)"}
+          </button>
+        </div>
+      </div>
 
       {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
 

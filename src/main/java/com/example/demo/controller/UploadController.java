@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.dto.EstimateFormRequest;
 import com.example.demo.dto.UploadResponse;
 import com.example.demo.service.CarbonCreditService;
 import com.example.demo.service.CarbonWalletService;
@@ -75,5 +76,32 @@ public class UploadController {
 
         UploadResponse resp = new UploadResponse(co2Kg, creditsTons, "OK", extracted);
         return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping(value = "/estimate/form", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<UploadResponse> estimateFromForm(@org.springframework.web.bind.annotation.RequestBody EstimateFormRequest req) {
+        BigDecimal co2Kg = fileUploadService.estimateFromFields(req.getDistanceKm(), req.getEnergyKwh(), req.getLiters(), req.getExplicitCo2Kg());
+        if (co2Kg == null) co2Kg = BigDecimal.ZERO;
+        BigDecimal creditsTons = co2Kg.divide(BigDecimal.valueOf(1000), 4, RoundingMode.HALF_UP);
+        UploadResponse resp = new UploadResponse(co2Kg, creditsTons, "OK (form estimate)", null);
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping(value = "/issue-credits", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
+    public ResponseEntity<String> issueCredits(@org.springframework.web.bind.annotation.RequestBody java.util.Map<String, Object> body) {
+        try {
+            Long userId = ((Number) body.get("userId")).longValue();
+            BigDecimal creditsTons = new BigDecimal(body.get("creditsTons").toString());
+
+            if (creditsTons.compareTo(BigDecimal.ZERO) > 0) {
+                carbonCreditService.issueCredit(userId, creditsTons.doubleValue(), "Form estimate credits");
+                carbonWalletService.credit(userId, creditsTons, "Form estimate credits");
+            }
+            return ResponseEntity.ok("Credits issued successfully: " + creditsTons + " tons");
+        } catch (Exception ex) {
+            log.error("Error issuing credits", ex);
+            return ResponseEntity.status(500).body("Failed to issue credits: " + ex.getMessage());
+        }
     }
 }

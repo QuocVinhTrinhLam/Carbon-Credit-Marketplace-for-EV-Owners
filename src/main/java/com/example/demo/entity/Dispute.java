@@ -43,7 +43,7 @@ public class Dispute {
     private LocalDateTime createdAt;
 
     @Column(name = "opened_at")
-    private LocalDateTime openedAt; // 🟢 dòng này là quan trọng nhất
+    private LocalDateTime openedAt; 
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;

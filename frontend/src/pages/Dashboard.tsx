@@ -17,8 +17,18 @@ import { walletService } from "../services/wallet";
 const DashboardPage = () => {
   const { user } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
+  const [showCertDialog, setShowCertDialog] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [certAmount, setCertAmount] = useState<number | "">("");
+  const [requestingCert, setRequestingCert] = useState(false);
+  const [certMessage, setCertMessage] = useState<string | null>(null);
+  const [certProjectName, setCertProjectName] = useState<string>("");
+  const [certRef, setCertRef] = useState<string>("");
+  const [certBody, setCertBody] = useState<string>("");
+  const [certSerial, setCertSerial] = useState<string>("");
+  const [certNotes, setCertNotes] = useState<string>("");
+  
 
   const walletQuery = useFetch(
     ["wallet", user?.id],
@@ -51,6 +61,14 @@ const DashboardPage = () => {
     { enabled: Boolean(user?.id) }
   );
 
+  const totalCreditsOwned = useMemo(() => {
+    if (!portfolioQuery.data) return 0;
+    // Sum all VALID certificates (both ISSUED from transactions and REQUESTED from CVA)
+    return portfolioQuery.data
+      .filter((c: any) => c.status === "VALID")
+      .reduce((sum: number, c: any) => sum + (Number(c.quantity || 0)), 0);
+  }, [portfolioQuery.data]);
+
   // Listing creation form state
   const [title, setTitle] = useState("");
   const [carbonAmount, setCarbonAmount] = useState<number | "">("");
@@ -74,7 +92,7 @@ const DashboardPage = () => {
     e.preventDefault();
     setCreateError(null);
     setCreating(true);
-    try {
+      try {
       // Clamp price per credit to allowed range
       const minPrice = 140000;
       const maxPrice = 270000;
@@ -132,7 +150,7 @@ const DashboardPage = () => {
   }, [transactionsQuery.data]);
 
   return (
-    <div id="dashboard-section" className="space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 px-6 py-8 text-white shadow-lg">
         <h1 className="text-2xl font-semibold">
           Hello {user?.name?.split(" ")[0] ?? "there"}, welcome back 👋
@@ -155,7 +173,7 @@ const DashboardPage = () => {
           walletQueryPending={walletQuery.isLoading}
           balance={walletQuery.data?.balance ?? 0}
           currency="VND"
-          portfolioCount={portfolioQuery.data?.length ?? 0}
+          portfolioCount={portfolioQuery.data ? portfolioQuery.data.filter((c: any) => c.status === "VALID").length : 0}
           listingsActive={listingsQuery.data?.filter((listing) => listing.status === "ACTIVE").length ?? 0}
           tradesCount={transactionsQuery.data?.length ?? 0}
         />
@@ -249,7 +267,7 @@ const DashboardPage = () => {
                     <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2">
                       <option value="">Select province</option>
                       {[
-                        "Hanoi", "Ho Chi Minh City", "Da Nang", "Hai Phong", "Can Tho", "Binh Duong", "Dong Nai", "Hue", "Nha Trang", "Quang Ninh", "Bac Ninh", "Thanh Hoa", "Nghe An", "Binh Thuan", "Vinh Phuc", "Long An", "Hai Duong", "Tra Vinh"
+                        "Hanoi","Ho Chi Minh City","Da Nang","Hai Phong","Can Tho","Binh Duong","Dong Nai","Hue","Nha Trang","Quang Ninh","Bac Ninh","Thanh Hoa","Nghe An","Binh Thuan","Vinh Phuc","Long An","Hai Duong","Tra Vinh"
                       ].map((p) => (
                         <option key={p} value={p}>{p}</option>
                       ))}
@@ -269,17 +287,97 @@ const DashboardPage = () => {
                     <input type="text" value={(Number(carbonAmount || 0) * Number(pricePerCredit || 0)).toLocaleString('vi-VN')} readOnly className="mt-1 block w-full rounded-md border px-3 py-2 bg-slate-50" />
                   </div>
                   {createError && <p className="text-sm text-red-600">{createError}</p>}
-                  <DialogFooter>
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={creating}>{creating ? "Submitting..." : "Submit listing request"}</Button>
-                      <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
-                    </div>
-                  </DialogFooter>
+                              <DialogFooter>
+                                <div className="flex gap-2">
+                                  <Button type="submit" disabled={creating}>{creating ? "Submitting..." : "Submit listing request"}</Button>
+                                  <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
+                                </div>
+                              </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
             <Button variant="outline" onClick={() => setShowCreate(true)}>
               Create new listing
+            </Button>
+            <Dialog open={showCertDialog} onOpenChange={setShowCertDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Request Certificate Issuance</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!user?.id) return;
+                  setRequestingCert(true);
+                  setCertMessage(null);
+                  try {
+                    await creditService.requestCertificate({
+                      ownerId: user.id,
+                      amount: Number(certAmount || 0),
+                      projectName: certProjectName || undefined,
+                      certificationRef: certRef || undefined,
+                      certificationBody: certBody || undefined,
+                      serialNumber: certSerial || undefined,
+                      notes: certNotes || undefined
+                    });
+                    setCertMessage("Certificate request submitted successfully");
+                    if (portfolioQuery && portfolioQuery.refetch) await portfolioQuery.refetch();
+                    setShowCertDialog(false);
+                    setCertAmount("");
+                    setCertProjectName(""); setCertRef(""); setCertBody(""); setCertSerial(""); setCertNotes("");
+                  } catch (err) {
+                    setCertMessage("Failed to submit certificate request");
+                  } finally {
+                    setRequestingCert(false);
+                  }
+                }} className="space-y-3 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium">Amount (tCO₂e)</label>
+                    <input type="number" min={0} step="0.01" value={certAmount as any} onChange={(e) => setCertAmount(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Total credits owned: {totalCreditsOwned ? Number(totalCreditsOwned).toLocaleString('vi-VN') : '—'} tCO₂e</span>
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="text-sm underline text-emerald-600" onClick={() => {
+                          if (totalCreditsOwned) setCertAmount(Number(totalCreditsOwned) || 0);
+                        }}>Use total owned</button>
+                        <button type="button" className="text-sm underline text-slate-600" onClick={() => {
+                          setCertAmount(1);
+                        }}>Use 1</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium">Project name</label>
+                    <input value={certProjectName} onChange={(e) => setCertProjectName(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Certification reference</label>
+                    <input value={certRef} onChange={(e) => setCertRef(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Issuing body</label>
+                    <input value={certBody} onChange={(e) => setCertBody(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Serial number</label>
+                    <input value={certSerial} onChange={(e) => setCertSerial(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium">Notes</label>
+                    <textarea value={certNotes} onChange={(e) => setCertNotes(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                  </div>
+                  {certMessage && <p className="text-sm text-green-600">{certMessage}</p>}
+                  <DialogFooter>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={requestingCert}>{requestingCert ? "Requesting..." : "Request Certificate"}</Button>
+                      <Button variant="ghost" onClick={() => setShowCertDialog(false)}>Cancel</Button>
+                    </div>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={() => setShowCertDialog(true)}>
+              Request Certificate
             </Button>
           </CardContent>
         </Card>
@@ -301,7 +399,7 @@ const DashboardPage = () => {
             <Skeleton className="h-20 w-full" />
           ) : myListingsQuery.data && myListingsQuery.data.length > 0 ? (
             myListingsQuery.data.map((l) => (
-              <div key={l.id} className="flex items-center justify-between border-b py-2">
+                <div key={l.id} className="flex items-center justify-between border-b py-2">
                 <div>
                   <p className="font-medium">{l.name}</p>
                   <p className="text-xs text-muted-foreground">{l.summary}</p>

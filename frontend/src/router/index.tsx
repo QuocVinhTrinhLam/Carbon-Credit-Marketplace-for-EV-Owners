@@ -22,6 +22,7 @@ const AdminWalletsPage = lazy(() => import("../pages/admin/AdminWallets"));
 const AdminListingsPage = lazy(() => import("../pages/admin/AdminListings"));
 const AdminPendingListingsPage = lazy(() => import("../pages/admin/AdminPendingListings"));
 const AdminReportsPage = lazy(() => import("../pages/admin/AdminReports"));
+const AdminCertificatesPage = lazy(() => import("../pages/admin/AdminCertificates"));
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -106,6 +107,11 @@ export const AppRouter = () => (
       <Route path="/admin/listings/pending" element={
         <AdminRoute>
           <AdminPendingListingsPage />
+        </AdminRoute>
+      } />
+      <Route path="/admin/certificates" element={
+        <AdminRoute>
+          <AdminCertificatesPage />
         </AdminRoute>
       } />
       <Route path="/admin/reports" element={

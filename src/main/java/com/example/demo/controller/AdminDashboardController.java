@@ -38,8 +38,8 @@ public class AdminDashboardController {
     private final UserRepository userRepository;
     private final ListingRepository listingRepository;
     private final TransactionRepository transactionRepository;
-        private final Co2Repository co2Repository;
-        private final com.example.demo.service.DashboardSseService dashboardSseService;
+    private final Co2Repository co2Repository;
+    private final com.example.demo.service.DashboardSseService dashboardSseService;
 
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Object>> getSummary() {
@@ -49,6 +49,7 @@ public class AdminDashboardController {
         data.put("totalUsers", userRepository.count());
         data.put("totalListings", listingRepository.count());
         data.put("totalTransactions", transactionRepository.count());
+        
         // Transactions summary
         List<Transaction> transactions = transactionRepository.findAll();
         long completed = transactions.stream()
@@ -60,14 +61,14 @@ public class AdminDashboardController {
         long pending = transactions.stream()
                 .filter(t -> t.getStatus() == Transaction.TransactionStatus.PENDING)
                 .count();
-        long confirmed = transactions.stream()
-                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED)
-                .count();
+        
+        // Loại bỏ logic đếm confirmed vì trạng thái này đã bị xóa khỏi Entity
+        // long confirmed = 0; 
 
         data.put("transactionsCompleted", completed);
         data.put("transactionsCancelled", cancelled);
         data.put("transactionsPending", pending);
-        data.put("transactionsConfirmed", confirmed);
+        data.put("transactionsConfirmed", 0L); // Giả định bằng 0 hoặc xóa field này khỏi response nếu không cần
 
         // Credits verified (sum of credits for approved reductions)
         BigDecimal creditsVerified = co2Repository.findAll().stream()
@@ -77,9 +78,9 @@ public class AdminDashboardController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         data.put("creditsVerified", creditsVerified);
 
-        // Platform revenue: sum of amounts for COMPLETED transactions
+        // Platform revenue: sum of amounts for COMPLETED transactions (Đã loại bỏ CONFIRMED)
         BigDecimal platformRevenue = transactions.stream()
-                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED)
+                .filter(t -> t.getStatus() == Transaction.TransactionStatus.COMPLETED)
                 .map(Transaction::getAmount)
                 .filter(a -> a != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -101,11 +102,14 @@ public class AdminDashboardController {
         data.put("usersThisMonth", usersThisMonth);
         data.put("usersPrevMonth", usersPrevMonth);
 
+        // Tính doanh thu tháng này (Đã loại bỏ CONFIRMED)
         BigDecimal revenueThisMonth = transactionRepository.findAll().stream()
-                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED))
+                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startThis) && t.getStatus() == Transaction.TransactionStatus.COMPLETED)
                 .map(Transaction::getAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+        // Tính doanh thu tháng trước (Đã loại bỏ CONFIRMED)
         BigDecimal revenuePrevMonth = transactionRepository.findAll().stream()
-                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startPrev) && t.getCreatedAt().isBefore(startThis) && (t.getStatus() == Transaction.TransactionStatus.COMPLETED || t.getStatus() == Transaction.TransactionStatus.COMPLETED))
+                .filter(t -> t.getCreatedAt() != null && t.getCreatedAt().isAfter(startPrev) && t.getCreatedAt().isBefore(startThis) && t.getStatus() == Transaction.TransactionStatus.COMPLETED)
                 .map(Transaction::getAmount).filter(a -> a != null).reduce(BigDecimal.ZERO, BigDecimal::add);
         data.put("revenueThisMonth", revenueThisMonth);
         data.put("revenuePrevMonth", revenuePrevMonth);
@@ -122,113 +126,113 @@ public class AdminDashboardController {
         return ResponseEntity.ok(data);
     }
 
-        @GetMapping("/monthly-volume")
-        public ResponseEntity<Map<String, Object>> getMonthlyVolume(@RequestParam(name = "months", defaultValue = "6") int months) {
-                log.info("Admin - Get monthly transaction volume for last {} months", months);
+    @GetMapping("/monthly-volume")
+    public ResponseEntity<Map<String, Object>> getMonthlyVolume(@RequestParam(name = "months", defaultValue = "6") int months) {
+        log.info("Admin - Get monthly transaction volume for last {} months", months);
 
-                Map<String, Object> resp = new HashMap<>();
-                List<String> labels = new ArrayList<>();
-                List<Long> transactionsCounts = new ArrayList<>();
-                List<java.math.BigDecimal> volumes = new ArrayList<>();
+        Map<String, Object> resp = new HashMap<>();
+        List<String> labels = new ArrayList<>();
+        List<Long> transactionsCounts = new ArrayList<>();
+        List<java.math.BigDecimal> volumes = new ArrayList<>();
 
-                // Build month buckets from oldest -> newest
-                for (int i = months - 1; i >= 0; i--) {
-                        YearMonth ym = YearMonth.now(ZoneId.systemDefault()).minusMonths(i);
-                        LocalDateTime start = ym.atDay(1).atStartOfDay();
-                        LocalDateTime end = ym.plusMonths(1).atDay(1).atStartOfDay();
+        // Build month buckets from oldest -> newest
+        for (int i = months - 1; i >= 0; i--) {
+            YearMonth ym = YearMonth.now(ZoneId.systemDefault()).minusMonths(i);
+            LocalDateTime start = ym.atDay(1).atStartOfDay();
+            LocalDateTime end = ym.plusMonths(1).atDay(1).atStartOfDay();
 
-                        // Label like 'Jul' or 'Nov'
-                        labels.add(ym.getMonth().toString().substring(0, 1).toUpperCase() + ym.getMonth().toString().substring(1,3).toLowerCase());
+            // Label like 'Jul' or 'Nov'
+            labels.add(ym.getMonth().toString().substring(0, 1).toUpperCase() + ym.getMonth().toString().substring(1,3).toLowerCase());
 
-                        long txCount = transactionRepository.findAll().stream()
-                                        .filter(t -> t.getCreatedAt() != null && (t.getCreatedAt().isEqual(start) || (t.getCreatedAt().isAfter(start) && t.getCreatedAt().isBefore(end))))
-                                        .count();
-                        transactionsCounts.add(txCount);
+            long txCount = transactionRepository.findAll().stream()
+                    .filter(t -> t.getCreatedAt() != null && (t.getCreatedAt().isEqual(start) || (t.getCreatedAt().isAfter(start) && t.getCreatedAt().isBefore(end))))
+                    .count();
+            transactionsCounts.add(txCount);
 
-                        java.math.BigDecimal vol = co2Repository.findAll().stream()
-                                        .filter(r -> r.getStatus() != null && r.getStatus().name().equalsIgnoreCase("APPROVED")
-                                                        && r.getCreatedAt() != null && (r.getCreatedAt().isEqual(start) || (r.getCreatedAt().isAfter(start) && r.getCreatedAt().isBefore(end))))
-                                        .map(Co2Reduction::getCredits)
-                                        .filter(c -> c != null)
-                                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-                        volumes.add(vol);
-                }
-
-                resp.put("labels", labels);
-                resp.put("transactions", transactionsCounts);
-                // convert BigDecimal volumes to numbers (use double) for JSON
-                List<Double> volumesDouble = new ArrayList<>();
-                for (java.math.BigDecimal b : volumes) volumesDouble.add(b == null ? 0.0 : b.doubleValue());
-                resp.put("volumes", volumesDouble);
-
-                return ResponseEntity.ok(resp);
+            java.math.BigDecimal vol = co2Repository.findAll().stream()
+                    .filter(r -> r.getStatus() != null && r.getStatus().name().equalsIgnoreCase("APPROVED")
+                            && r.getCreatedAt() != null && (r.getCreatedAt().isEqual(start) || (r.getCreatedAt().isAfter(start) && r.getCreatedAt().isBefore(end))))
+                    .map(Co2Reduction::getCredits)
+                    .filter(c -> c != null)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            volumes.add(vol);
         }
 
-            @GetMapping("/credit-status")
-            public ResponseEntity<Map<String, Object>> getCreditStatus() {
-                log.info("Admin - Get credit status summary");
+        resp.put("labels", labels);
+        resp.put("transactions", transactionsCounts);
+        // convert BigDecimal volumes to numbers (use double) for JSON
+        List<Double> volumesDouble = new ArrayList<>();
+        for (java.math.BigDecimal b : volumes) volumesDouble.add(b == null ? 0.0 : b.doubleValue());
+        resp.put("volumes", volumesDouble);
 
-                // Total approved credits (tCO2e)
-                java.math.BigDecimal totalCredits = co2Repository.findAll().stream()
-                        .filter(r -> r.getStatus() != null && r.getStatus() == Co2Status.APPROVED)
-                        .map(Co2Reduction::getCredits)
-                        .filter(c -> c != null)
-                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        return ResponseEntity.ok(resp);
+    }
 
-                // Listed credits: sum of carbon amounts on listings that are available/listed
-                java.math.BigDecimal listed = listingRepository.findAll().stream()
-                        .filter(l -> l.getStatus() == Listing.ListingStatus.OPEN || l.getStatus() == Listing.ListingStatus.RESERVED || l.getStatus() == Listing.ListingStatus.APPROVED)
-                        .map(Listing::getCarbonAmount)
-                        .filter(a -> a != null)
-                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    @GetMapping("/credit-status")
+    public ResponseEntity<Map<String, Object>> getCreditStatus() {
+        log.info("Admin - Get credit status summary");
 
-                // Sold credits: sum of carbon amounts on listings with SOLD status
-                java.math.BigDecimal sold = listingRepository.findAll().stream()
-                        .filter(l -> l.getStatus() == Listing.ListingStatus.SOLD)
-                        .map(Listing::getCarbonAmount)
-                        .filter(a -> a != null)
-                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        // Total approved credits (tCO2e)
+        java.math.BigDecimal totalCredits = co2Repository.findAll().stream()
+                .filter(r -> r.getStatus() != null && r.getStatus() == Co2Status.APPROVED)
+                .map(Co2Reduction::getCredits)
+                .filter(c -> c != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-                // available = total - listed - sold (floor at zero)
-                java.math.BigDecimal available = totalCredits.subtract(listed).subtract(sold);
-                if (available.compareTo(java.math.BigDecimal.ZERO) < 0) available = java.math.BigDecimal.ZERO;
+        // Listed credits: sum of carbon amounts on listings that are available/listed
+        java.math.BigDecimal listed = listingRepository.findAll().stream()
+                .filter(l -> l.getStatus() == Listing.ListingStatus.OPEN || l.getStatus() == Listing.ListingStatus.RESERVED || l.getStatus() == Listing.ListingStatus.APPROVED)
+                .map(Listing::getCarbonAmount)
+                .filter(a -> a != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-                Map<String, Object> out = new HashMap<>();
-                out.put("total", totalCredits.doubleValue());
-                out.put("available", available.doubleValue());
-                out.put("listed", listed.doubleValue());
-                out.put("sold", sold.doubleValue());
+        // Sold credits: sum of carbon amounts on listings with SOLD status
+        java.math.BigDecimal sold = listingRepository.findAll().stream()
+                .filter(l -> l.getStatus() == Listing.ListingStatus.SOLD)
+                .map(Listing::getCarbonAmount)
+                .filter(a -> a != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
 
-                return ResponseEntity.ok(out);
-            }
+        // available = total - listed - sold (floor at zero)
+        java.math.BigDecimal available = totalCredits.subtract(listed).subtract(sold);
+        if (available.compareTo(java.math.BigDecimal.ZERO) < 0) available = java.math.BigDecimal.ZERO;
 
-        @GetMapping("/stream")
-        public org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream() {
-                log.info("Admin - Open dashboard SSE stream");
-                return dashboardSseService.registerEmitter();
-        }
+        Map<String, Object> out = new HashMap<>();
+        out.put("total", totalCredits.doubleValue());
+        out.put("available", available.doubleValue());
+        out.put("listed", listed.doubleValue());
+        out.put("sold", sold.doubleValue());
 
-        @PostMapping("/refresh")
-        public ResponseEntity<Void> refreshNow() {
-                log.info("Admin - Manual refresh requested");
-                dashboardSseService.manualPublish();
-                return ResponseEntity.ok().build();
-        }
+        return ResponseEntity.ok(out);
+    }
 
-        @GetMapping("/clients")
-        public ResponseEntity<Integer> clients() {
-                return ResponseEntity.ok(dashboardSseService.getConnectedClientCount());
-        }
+    @GetMapping("/stream")
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream() {
+        log.info("Admin - Open dashboard SSE stream");
+        return dashboardSseService.registerEmitter();
+    }
 
-        @PostMapping("/refresh/interval")
-        public ResponseEntity<Void> setInterval(@RequestParam long seconds) {
-                dashboardSseService.setRefreshInterval(seconds);
-                return ResponseEntity.ok().build();
-        }
+    @PostMapping("/refresh")
+    public ResponseEntity<Void> refreshNow() {
+        log.info("Admin - Manual refresh requested");
+        dashboardSseService.manualPublish();
+        return ResponseEntity.ok().build();
+    }
 
-        @PostMapping("/refresh/toggle")
-        public ResponseEntity<Void> toggle(@RequestParam boolean enabled) {
-                dashboardSseService.setRefreshing(enabled);
-                return ResponseEntity.ok().build();
-        }
+    @GetMapping("/clients")
+    public ResponseEntity<Integer> clients() {
+        return ResponseEntity.ok(dashboardSseService.getConnectedClientCount());
+    }
+
+    @PostMapping("/refresh/interval")
+    public ResponseEntity<Void> setInterval(@RequestParam long seconds) {
+        dashboardSseService.setRefreshInterval(seconds);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/refresh/toggle")
+    public ResponseEntity<Void> toggle(@RequestParam boolean enabled) {
+        dashboardSseService.setRefreshing(enabled);
+        return ResponseEntity.ok().build();
+    }
 }

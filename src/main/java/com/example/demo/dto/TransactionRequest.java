@@ -1,9 +1,12 @@
 package com.example.demo.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal; // Import BigDecimal
 
 @Data
 @NoArgsConstructor
@@ -16,6 +19,8 @@ public class TransactionRequest {
     @NotNull(message = "Buyer ID is required")
     private Long buyerId;
     
-    // Thêm field quantity, mặc định là 1
-    private Integer quantity = 1;
+    // Sử dụng BigDecimal cho số lượng để đảm bảo độ chính xác
+    @NotNull(message = "Quantity is required")
+    @DecimalMin(value = "0.000001", inclusive = true, message = "Quantity must be positive")
+    private BigDecimal quantity;
 }

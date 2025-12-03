@@ -91,6 +91,37 @@ export default function AdminUsers() {
     }
   };
 
+  const handleIssueCertificate = async (userId: number) => {
+    const amountStr = prompt("Enter certificate amount (tCO₂e):");
+    if (amountStr === null) return;
+    const amount = Number(amountStr);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Invalid amount");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`/api/admin/certificates/${userId}/issue`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ amount })
+      });
+      if (response.ok) {
+        alert("Certificate issued successfully");
+      } else {
+        const txt = await response.text();
+        alert("Failed to issue certificate: " + txt);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error while issuing certificate");
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
@@ -188,6 +219,12 @@ export default function AdminUsers() {
                           className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
                         >
                           Make CVA
+                        </button>
+                        <button
+                          onClick={() => handleIssueCertificate(user.id)}
+                          className="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700"
+                        >
+                          Issue Certificate
                         </button>
                       </div>
                     </td>

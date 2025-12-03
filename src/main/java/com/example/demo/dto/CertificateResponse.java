@@ -15,4 +15,5 @@ public class CertificateResponse {
     private String issuedDate;
     private String expiresAt;
     private String status;
+    private String certificateType;
 }

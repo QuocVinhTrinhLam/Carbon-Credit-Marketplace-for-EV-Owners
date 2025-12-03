@@ -7,4 +7,9 @@ import java.util.List;
 
 public interface CarbonCertificateRepository extends JpaRepository<CarbonCertificate, Long> {
     List<CarbonCertificate> findByOwnerId(Long ownerId);
+    
+    List<CarbonCertificate> findByStatusAndCertificateType(
+            CarbonCertificate.CertificateStatus status,
+            CarbonCertificate.CertificateType certificateType
+    );
 }

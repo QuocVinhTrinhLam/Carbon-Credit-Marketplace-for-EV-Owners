@@ -23,13 +23,13 @@ public class Wallet {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance = BigDecimal.ZERO;   // chính xác số học
 
-    // ✅ Liên kết 1-1 với User
+    // Liên kết 1-1 với User
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     @JsonBackReference // ánh xạ ngược với @JsonManagedReference bên User
     private User user;
 
-    // ✅ Danh sách giao dịch của ví
+    //Danh sách giao dịch của ví
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL)
     private List<WalletTransaction> walletTransactions;
 }

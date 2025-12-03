@@ -27,15 +27,10 @@ const CreditsPage = () => {
       return { totalCredits: 0, valid: 0, expiringSoon: 0 };
     }
 
-    const totalCredits = portfolioQuery.data.reduce(
-      (acc, item) => acc + item.quantity,
-      0
-    );
-
-    const valid = portfolioQuery.data.filter(
-      (item) => item.status === "VALID"
-    ).length;
-
+    // Count all VALID certificates (both ISSUED from transactions and REQUESTED from CVA)
+    const validCerts = portfolioQuery.data.filter((item) => item.status === "VALID");
+    const totalCredits = validCerts.reduce((acc, item) => acc + item.quantity, 0);
+    const valid = validCerts.length;
     const expiringSoon = portfolioQuery.data.filter((item) => item.status === "EXPIRING_SOON").length;
 
     return { totalCredits, valid, expiringSoon };
@@ -91,11 +86,12 @@ const CreditsPage = () => {
             <CardContent>
               {portfolioQuery.isLoading ? (
                 <LoadingTable />
-              ) : portfolioQuery.data && portfolioQuery.data.length > 0 ? (
+              ) : portfolioQuery.data && portfolioQuery.data.filter((c: any) => c.status === "VALID").length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Project</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Certification</TableHead>
@@ -104,10 +100,19 @@ const CreditsPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {portfolioQuery.data.map((certificate) => (
+                    {portfolioQuery.data.filter((c: any) => c.status === "VALID").map((certificate) => (
                       <TableRow key={certificate.id}>
                         <TableCell className="font-medium">
                           {certificate.projectName}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                            certificate.certificateType === "REQUESTED" 
+                              ? "bg-blue-100 text-blue-800" 
+                              : "bg-purple-100 text-purple-800"
+                          }`}>
+                            {certificate.certificateType === "REQUESTED" ? "User Request" : "Purchase"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <StatusPill status={certificate.status} />
@@ -223,10 +228,12 @@ function SummaryCard({
   );
 }
 
-function StatusPill({ status }: { status: "VALID" | "EXPIRED" | "EXPIRING_SOON" }) {
+function StatusPill({ status }: { status: "VALID" | "PENDING" | "EXPIRED" | "EXPIRING_SOON" }) {
   const variant =
     status === "VALID"
       ? "success"
+      : status === "PENDING"
+      ? "warning"
       : status === "EXPIRED"
       ? "destructive"
       : "secondary";
@@ -236,6 +243,8 @@ function StatusPill({ status }: { status: "VALID" | "EXPIRED" | "EXPIRING_SOON" 
       className={
         variant === "success"
           ? "rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700"
+          : variant === "warning"
+          ? "rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700"
           : variant === "destructive"
           ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-600"
           : "rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700"

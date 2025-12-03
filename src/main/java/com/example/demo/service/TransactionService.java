@@ -126,10 +126,15 @@ public class TransactionService {
         BigDecimal purchasedQuantity = transaction.getCarbonQuantity();
         Double credits = purchasedQuantity.doubleValue(); // Cần chú ý về độ chính xác khi chuyển sang Double
         
-        certificateService.createCertificate(
-             transaction.getBuyer().getId(),
-             credits
-        );
+           certificateService.createCertificate(
+               transaction.getBuyer().getId(),
+               credits,
+               null,
+               null,
+               null,
+               null,
+               null
+           );
 
         // 4. Cập nhật số lượng còn lại của Listing
         Listing listing = transaction.getListing();
